@@ -1,0 +1,536 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>codex-harness架构详解 | Hexo</title>
+    <meta name="author" content="WJL" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <link rel="icon" href="/images/avatar.jpg" />
+    <link rel="preconnect" href="https://s4.zstatic.net" />
+<script src="https://s4.zstatic.net/ajax/libs/vue/3.3.7/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.cn" />
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.cn/css2?family=Fira+Code:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap"
+/>
+<script> const mixins = {}; </script>
+
+<script src="https://polyfill.alicdn.com/v3/polyfill.min.js?features=default"></script>
+
+
+<script src="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://s4.zstatic.net/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+<link
+    rel="stylesheet"
+    href="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+/>
+<script src="/js/lib/highlight.js"></script>
+
+
+
+<script src="/js/lib/preview.js"></script>
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.css" />
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+    <div id="layout">
+        <transition name="fade">
+            <div id="loading" v-show="loading">
+                <div id="loading-circle">
+                    <h2>LOADING</h2>
+                    <p>加载过慢请开启缓存 浏览器默认开启</p>
+                    <img src="/images/loading.gif" />
+                </div>
+            </div>
+        </transition>
+        <div id="menu" :class="{ hidden: hiddenMenu, 'menu-color': menuColor}">
+    <nav id="desktop-menu">
+        <a class="title" href="/">
+            <span>HEXO</span>
+        </a>
+        
+        <a href="/">
+            <i class="fa-solid fa-house fa-fw"></i>
+            <span>&ensp;Home</span>
+        </a>
+        
+        <a href="/about">
+            <i class="fa-solid fa-id-card fa-fw"></i>
+            <span>&ensp;About</span>
+        </a>
+        
+        <a href="/archives">
+            <i class="fa-solid fa-box-archive fa-fw"></i>
+            <span>&ensp;Archives</span>
+        </a>
+        
+        <a href="/categories">
+            <i class="fa-solid fa-bookmark fa-fw"></i>
+            <span>&ensp;Categories</span>
+        </a>
+        
+        <a href="/tags">
+            <i class="fa-solid fa-tags fa-fw"></i>
+            <span>&ensp;Tags</span>
+        </a>
+        
+    </nav>
+    <nav id="mobile-menu">
+        <div class="title" @click="showMenuItems = !showMenuItems">
+            <i class="fa-solid fa-bars fa-fw"></i>
+            <span>&emsp;HEXO</span>
+        </div>
+        <transition name="slide">
+            <div class="items" v-show="showMenuItems">
+                
+                <a href="/">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-house fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Home</div>
+                    </div>
+                </a>
+                
+                <a href="/about">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-id-card fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">About</div>
+                    </div>
+                </a>
+                
+                <a href="/archives">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-box-archive fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Archives</div>
+                    </div>
+                </a>
+                
+                <a href="/categories">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-bookmark fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Categories</div>
+                    </div>
+                </a>
+                
+                <a href="/tags">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-tags fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Tags</div>
+                    </div>
+                </a>
+                
+            </div>
+        </transition>
+    </nav>
+</div>
+<transition name="fade">
+    <div id="menu-curtain" @click="showMenuItems = !showMenuItems" v-show="showMenuItems"></div>
+</transition>
+
+        <div id="main" :class="loading ? 'into-enter-from': 'into-enter-active'">
+            <div class="article">
+    <div>
+        <h1>codex-harness架构详解</h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2026/9/20
+        </span>
+        
+        
+    </div>
+    
+    <div class="content" v-pre>
+        <h1 id="拆解-OpenAI-Codex-的-Harness-架构：模型有了”眼睛和手”的秘密"><a href="#拆解-OpenAI-Codex-的-Harness-架构：模型有了”眼睛和手”的秘密" class="headerlink" title="拆解 OpenAI Codex 的 Harness 架构：模型有了”眼睛和手”的秘密"></a>拆解 OpenAI Codex 的 Harness 架构：模型有了”眼睛和手”的秘密</h1><blockquote>
+<p>本文内容整理自《小林面试笔记 · Codex Harness 架构》系列，系统梳理一次 Agent 任务的完整执行链路：从用户输入，到会话编排、上下文组装、工具执行，再到状态持久化与长期记忆。</p>
+</blockquote>
+<p>大模型原本只会根据输入生成输出，既看不见文件，也没有手去运行命令。可一旦接进 Codex，模型却像突然长出了眼睛和手，还能连续工作十几步，命令失败后甚至会读报错、换一种方法接着做。为什么？答案藏在模型外面的 <strong>Codex Harness</strong> 里。</p>
+<p>Codex 源码已在 GitHub 开源（<code>https://github.com/openai/codex</code>），本文沿着一次任务的执行过程，把 Harness 的架构一层层拆开讲清楚。</p>
+<hr>
+<h2 id="一、为什么只有模型不够？"><a href="#一、为什么只有模型不够？" class="headerlink" title="一、为什么只有模型不够？"></a>一、为什么只有模型不够？</h2><p>先做一个最简单的假设：Codex 里面只有一个大模型。</p>
+<p>用户说「帮我修改项目」，模型读到这句话，最多生成一段回答。哪怕回答里写出了正确代码，也只会停留在文本中——<strong>文件没有改变，命令没有运行，任务更不会因为一次回答失败就自动发起下一次请求</strong>。</p>
+<p>那还缺什么？</p>
+<ol>
+<li>要有人把<strong>项目规则、代码片段和之前的执行结果</strong>交给模型。</li>
+<li>要有人<strong>接住模型提出的动作</strong>，真的去读文件、改文件、运行命令。</li>
+<li>要有人<strong>记住任务进行到哪里</strong>，判断什么时候继续、什么时候停下来。</li>
+</ol>
+<p>承担这些工作的，就是 <strong>Harness</strong>。</p>
+<p>所以理解 Codex 的第一步，不是先背模块名称，而是先分清三个角色：</p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>模型</strong></td>
+<td>决定下一步做什么</td>
+</tr>
+<tr>
+<td><strong>Harness</strong></td>
+<td>组织上下文、安排工具执行、收集结果，再交给模型继续判断</td>
+</tr>
+<tr>
+<td><strong>执行环境</strong></td>
+<td>实际存放项目文件、运行命令的地方</td>
+</tr>
+</tbody></table>
+<p>模型没有直接碰文件：模型提出动作 → Harness 把动作交给工具 → 工具在执行环境里完成操作 → 结果交回 Harness → Harness 重新组织输入 → 再次请求模型。<strong>模型给出下一步，Harness 把很多个”下一步”接成一项完整的工作。</strong></p>
+<h3 id="Harness-要回答的五类问题"><a href="#Harness-要回答的五类问题" class="headerlink" title="Harness 要回答的五类问题"></a>Harness 要回答的五类问题</h3><p>把一次任务放慢来看，Harness 至少要回答五类问题，这也就构成了它的五大部分：</p>
+<ol>
+<li><strong>接入与交互</strong>：用户从哪个界面发来输入，运行过程怎样返回界面？</li>
+<li><strong>会话与编排</strong>：一项任务要请求模型多少次，下一步是否继续？</li>
+<li><strong>上下文管理</strong>：这次到底给模型哪些规则、历史和工具结果？</li>
+<li><strong>工具与执行系统</strong>：模型提出一个动作，谁来执行，权限够不够？</li>
+<li><strong>状态持久化和记忆</strong>：任务关闭后怎样恢复，过去的经验怎样在以后被找到？</li>
+</ol>
+<p>于是就能把 Codex Harness 画成一张完整地图：</p>
+<ul>
+<li>最上面是<strong>客户端和 AppServer</strong>；</li>
+<li>中间是<strong>会话状态、Agent 循环与模型客户端</strong>；</li>
+<li>一侧负责<strong>上下文和记忆</strong>，另一侧负责<strong>工具、路由与执行</strong>；</li>
+<li>底部保存<strong>会话历史、元数据和记忆产物</strong>。</li>
+</ul>
+<blockquote>
+<p>Harness 会向模型服务发送请求，拿回模型的回答或工具调用。用哪个模型、开放哪些工具、命令怎样运行，由<strong>配置</strong>决定；真正执行工具时，还要按照<strong>权限策略</strong>处理审批和沙箱限制。</p>
+</blockquote>
+<hr>
+<h2 id="二、为什么需要-AppServer？"><a href="#二、为什么需要-AppServer？" class="headerlink" title="二、为什么需要 AppServer？"></a>二、为什么需要 AppServer？</h2><p>Codex 不只有一种界面。终端、IDE、桌面应用都可能提交任务，也都需要接收文字增量、工具进度、文件变更和审批请求。</p>
+<p>如果每个界面都自己实现一套 Agent 循环，同样的任务，在终端和桌面应用里就可能按不同流程执行；以后修一个问题，也得分别修改多套实现。</p>
+<p><strong>AppServer 解决的正是接入问题</strong>：把界面发来的需求转交给 Agent 引擎，再把模型输出、工具进度和审批请求传回界面。它既可以作为独立服务供客户端连接，也可以在同一个进程里使用。</p>
+<p>关键点在于——<strong>交流是双向的</strong>。因为 Agent 并不是普通接口那种”请求进去、结果出来”。执行遇到审批时，服务还会反过来向客户端提问，等待用户允许或拒绝，然后再继续原来的工作。所以 AppServer 负责的是一段<strong>持续交互</strong>，而不是一次简单的问答。</p>
+<h3 id="一项任务怎么流动？"><a href="#一项任务怎么流动？" class="headerlink" title="一项任务怎么流动？"></a>一项任务怎么流动？</h3><p>一句话「帮我修改一下这个项目」第一次穿过总图：</p>
+<ol>
+<li>输入先经过 <strong>AppServer</strong> 进入<strong>会话（Session）</strong>；</li>
+<li>会话引擎准备这一轮工作；</li>
+<li><strong>上下文系统</strong>把规则、环境和已有历史组织起来；</li>
+<li>再由<strong>模型客户端</strong>请求模型；</li>
+<li>模型可能先提出搜索代码，<strong>工具系统</strong>接到调用后在执行环境中完成搜索，把结果写回历史。</li>
+</ol>
+<p><strong>真正的主线是一个闭环</strong>：准备上下文 → 请求模型 → 执行动作 → 得到反馈 → 再准备下一次上下文。地底部的历史会持续记录过程，后台记忆在满足条件时处理过去的历史，为未来任务提供材料，且不阻塞眼前这项任务。</p>
+<hr>
+<h2 id="三、Agent-循环怎么运转？"><a href="#三、Agent-循环怎么运转？" class="headerlink" title="三、Agent 循环怎么运转？"></a>三、Agent 循环怎么运转？</h2><h3 id="为什么要多次请求模型？"><a href="#为什么要多次请求模型？" class="headerlink" title="为什么要多次请求模型？"></a>为什么要多次请求模型？</h3><p>还是那句最简单的需求：「帮我修改一下这个项目。」</p>
+<ul>
+<li>第一次请求模型时，模型连项目里有哪些文件都不知道，合理的动作可能只是先读规则，或搜索相关代码。只有工具真的返回结果后，模型才获得了新的事实。</li>
+<li>第二次请求就和第一次不一样了：第一次决定<strong>从哪里开始</strong>，第二次根据刚读到的内容<strong>判断该改什么</strong>。</li>
+<li>修改完成后，验证命令又可能带回成功或失败的新信息，第三、第四次请求继续建立在这些反馈上。</li>
+</ul>
+<p>这就是 <strong>Agent 循环</strong>存在的原因：<strong>很多信息无法靠模型猜出来，只能先行动，再根据环境反馈。</strong></p>
+<p>最小理解是：<strong>Agent 不是模型连续思考的神秘过程，而是”模型判断”与”环境反馈”不断交替。</strong> 模型每次只基于当前输入给出输出，Harness 负责把前后几次请求接起来。</p>
+<h3 id="模型输出怎么变成动作？"><a href="#模型输出怎么变成动作？" class="headerlink" title="模型输出怎么变成动作？"></a>模型输出怎么变成动作？</h3><p>模型返回的不是一大段完整答案，而是<strong>流式事件</strong>：</p>
+<ul>
+<li><strong>文字增量</strong>到达时，Harness 可以交给界面展示；</li>
+<li><strong>一个工具调用完整生成后</strong>，才进入工具分发；</li>
+<li><strong>响应完成事件</strong>到达时，Harness 更新本次请求的状态和用量，由外层循环判断后面是否还有工作。</li>
+</ul>
+<p>连接和传输方式由模型客户端内部处理，对主循环来说，收到的始终是统一的文字增量、工具调用和完成事件。</p>
+<p>关键：工具执行完成后，结果要<strong>带回原来的调用标识</strong>。假如模型一次提出两个动作（读配置、跑命令），Harness 必须知道每段返回属于哪次调用，模型才能判断刚才哪一步成功、哪一步失败。</p>
+<h3 id="任务状态由谁保存？"><a href="#任务状态由谁保存？" class="headerlink" title="任务状态由谁保存？"></a>任务状态由谁保存？</h3><p>一次响应结束，用户的任务远没有结束。正在等待的工具、用户刚补充的一句话、已经完成的动作，放在哪里？答案是<strong>会话状态</strong>，而不是模型自己记住。</p>
+<p>先记住几个层级概念：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Thread（线程）</strong></td>
+<td>装着一整段多轮会话（如”先修 Bug，再补测试”）</td>
+</tr>
+<tr>
+<td><strong>Turn（轮次）</strong></td>
+<td>这次任务产生的多个 Item（一个 Turn 可请求模型很多次，<strong>不等于一次模型 API 调用</strong>）</td>
+</tr>
+<tr>
+<td><strong>Session（会话）</strong></td>
+<td>在程序内部保存这段会话的历史、待处理输入，以及运行时需要的共享服务</td>
+</tr>
+</tbody></table>
+<h3 id="为什么需要-StepContext？"><a href="#为什么需要-StepContext？" class="headerlink" title="为什么需要 StepContext？"></a>为什么需要 StepContext？</h3><p>想象一个场景：模型请求发出去时，工具目录里还有工具 A，模型按眼前能力生成了对 A 的调用。可在结果返回前，配置刚好刷新，新目录里已经没有 A。如果 Harness 按新目录解释这次调用，模型明明用了刚才展示的工具，却会收到「工具不存在」。</p>
+<p>所以 Codex 会为每次模型请求<strong>捕获一份 StepContext</strong>，固定这一步使用的模型设置、环境视图、MCP 绑定、工具路由和项目规则。工具调用返回后，Harness 仍沿用同一份请求上下文分发——<strong>模型按哪份工具列表发起调用，Harness 就按同一份列表处理</strong>。</p>
+<blockquote>
+<p>注意边界：StepContext 固定的只是<strong>请求采用的配置、工具列表和项目规则</strong>。文件仍可能被用户或其他任务修改，外部服务也可能变化——StepContext 不会把整个文件系统和外部世界一起冻结。</p>
+</blockquote>
+<h3 id="等待、取消与失败"><a href="#等待、取消与失败" class="headerlink" title="等待、取消与失败"></a>等待、取消与失败</h3><ul>
+<li><strong>等待</strong>：工具需要审批时，Harness 记下哪个操作正在等用户确认，把审批请求发到界面；用户答复后，交给对应操作继续处理。模型向用户提问同理。</li>
+<li><strong>用户追加输入</strong>：Codex 运行时你补一句「修改范围只限当前模块」，这句话通常先进入<strong>输入队列</strong>，主循环在合适边界取走，让后续请求看到。</li>
+<li><strong>取消</strong>：Harness 触发取消信号并收尾，但<strong>已写入的文件不会自动恢复</strong>；仍在运行的进程或子 Agent 有各自生命周期。</li>
+<li><strong>失败</strong>：重新请求模型、重新执行工具、从历史恢复会话，是三件事。尤其当一个命令已产生副作用时，<strong>模型连接重试不代表命令可以安全重跑</strong>。</li>
+</ul>
+<h3 id="循环什么时候结束？"><a href="#循环什么时候结束？" class="headerlink" title="循环什么时候结束？"></a>循环什么时候结束？</h3><p>模型没有继续调用工具，任务也不一定立刻结束。主循环还要确认：有没有用户刚补充的要求、有没有未处理的错误、停止前的检查是否允许结束。如果用户追加了要求，或停止前的钩子（<strong>StopHook</strong>）补入了需继续处理的内容，Agent 就可能再执行一轮。</p>
+<blockquote>
+<p>Codex 停下来，也不代表要求一定完成了。修 Bug 时文件改完只能说明代码变了，还要看测试和验证结果，才能判断问题是否解决。</p>
+</blockquote>
+<hr>
+<h2 id="四、上下文怎么组织？——ContextManager"><a href="#四、上下文怎么组织？——ContextManager" class="headerlink" title="四、上下文怎么组织？——ContextManager"></a>四、上下文怎么组织？——ContextManager</h2><h3 id="模型实际看到了什么？"><a href="#模型实际看到了什么？" class="headerlink" title="模型实际看到了什么？"></a>模型实际看到了什么？</h3><p>发请求前，Harness 要把这些内容组织进输入：</p>
+<ul>
+<li><strong>基础指令</strong>：规定 Codex 整体行为；</li>
+<li><strong>用户需求与项目规则</strong>：说明当前任务和仓库约束；</li>
+<li><strong>环境信息</strong>：如工作目录等；</li>
+<li><strong>历史记录</strong>：前几次请求和工具结果，标记任务进度；</li>
+<li><strong>工具定义</strong>：告诉模型这一步能提出哪些动作。</li>
+</ul>
+<p>为什么工具定义也要放进去？因为<strong>模型不会凭空知道工具名和参数格式</strong>，只有 Harness 告知本次可见能力，模型才能生成一条结构正确的调用。</p>
+<blockquote>
+<p>一句话：<strong>上下文决定模型”知道什么”，工具定义决定模型此刻”能要求 Harness 做什么”。</strong></p>
+</blockquote>
+<h3 id="项目规则怎么注入？"><a href="#项目规则怎么注入？" class="headerlink" title="项目规则怎么注入？"></a>项目规则怎么注入？</h3><p>Codex 会围绕<strong>项目边界和当前工作目录</strong>查找规则文件，<strong>按层级组织</strong>，并受<strong>读取预算</strong>限制。根目录规则适用于整个项目，越接近当前目录的规则越具体。模型需要同时知道全局要求和局部约束。</p>
+<p>但仓库里不会所有说明都被自动塞进模型——发现范围、候选文件、工作目录和读取预算都会影响最终内容。</p>
+<p>这里有一条边界要停一下：<strong>写进上下文的规则，可以要求模型怎样做，却不能直接扩大执行权限。</strong> 项目文件里即使写了「允许访问某个目录」，实际工具能否访问，仍由 Harness 的权限策略和执行环境决定。<strong>文字指令解决”行为选择”，沙箱解决”资源边界”，两者属于架构中不同的位置。</strong></p>
+<h3 id="上下文基线（Context-Baseline）"><a href="#上下文基线（Context-Baseline）" class="headerlink" title="上下文基线（Context Baseline）"></a>上下文基线（Context Baseline）</h3><p>如果每调用一次模型就把相同规则再追加一遍，上下文很快充满重复内容。Codex 会<strong>记下已介绍过的规则和环境信息</strong>（上下文基线）：第一次请求提供必要环境说明，以后环境变化再补充变化部分。之前的对话和工具结果仍随请求发给模型，只是不重复追加相同的环境说明。</p>
+<p>让前面内容保持稳定还有一个实际好处：<strong>连续请求拥有相同前缀时，模型服务才有机会复用前缀缓存。</strong></p>
+<h3 id="限长与历史规范化"><a href="#限长与历史规范化" class="headerlink" title="限长与历史规范化"></a>限长与历史规范化</h3><p>工具输出可能一次返回几万行。Codex 会在记录工具输出等环节<strong>应用限长策略</strong>，控制进入模型历史的内容规模。被省略的细节怎么办？模型需要发起更精确的动作——读取指定文件范围、按关键词搜索，或用范围更小的命令重新取得证据。</p>
+<p><strong>这里没有免费的午餐</strong>：限长换来可控上下文，也可能丢掉暂时看不出价值的细节。Harness 负责控制体积，模型通过后续工具调用补回真正需要的信息。</p>
+<p>除了文本长短，还有个结构问题更麻烦——<strong>调用与结果配对</strong>。模型提出调用、工具返回结果，这两个条目通过调用标识配成一对。发送历史前要做规范化：<strong>缺失结果的调用补出中止状态，孤立结果按协议处理，不支持的输入类型按模型能力调整</strong>。</p>
+<blockquote>
+<p>理解了这点就能解释很多现象：Codex 有时重新读一段文件，不一定是模型完全忘了，也可能是旧输出被限长，或压缩后需要重新取得精确证据。</p>
+</blockquote>
+<h3 id="上下文满了怎么办？"><a href="#上下文满了怎么办？" class="headerlink" title="上下文满了怎么办？"></a>上下文满了怎么办？</h3><p>历史持续增长，最终会接近模型上下文窗口。Codex 会跟踪使用量，在轮次开始前或运行中<strong>触发压缩</strong>，具体方式受模型服务和配置影响。</p>
+<p>其中<strong>总结式压缩</strong>可以理解成写一份”交接说明”：目标是啥、哪些改完了、确认了哪些事实、试过哪些失败的方法、接下来还要做什么。下一次请求靠这些信息接着做，就不必再带每一步的完整输出。</p>
+<p><strong>压缩最容易被高估的地方，是被想成无损存档</strong>——事实并非如此。摘要保住主线，也可能丢掉某段完整日志和局部细节。必须分清三个范围：</p>
+<table>
+<thead>
+<tr>
+<th>范围</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>当前模型窗口</strong></td>
+<td>本次请求能看到什么</td>
+</tr>
+<tr>
+<td><strong>Harness 维护的会话历史</strong></td>
+<td>为原会话恢复服务</td>
+</tr>
+<tr>
+<td><strong>长期记忆</strong></td>
+<td>跨任务复用的知识</td>
+</tr>
+</tbody></table>
+<p>上下文压缩服务于眼前任务的继续运行，<strong>不会自动把全部细节变成跨任务知识</strong>。</p>
+<hr>
+<h2 id="五、工具调用怎么执行？"><a href="#五、工具调用怎么执行？" class="headerlink" title="五、工具调用怎么执行？"></a>五、工具调用怎么执行？</h2><h3 id="模型能看到哪些工具？"><a href="#模型能看到哪些工具？" class="headerlink" title="模型能看到哪些工具？"></a>模型能看到哪些工具？</h3><p>模型要使用工具，必须看到名称、用途和参数结构。每次请求前，Codex 都要<strong>安排工具计划</strong>：哪些直接展示、哪些等需要时再查找、模型调用后交给谁处理。</p>
+<p>这里要区分三件事：</p>
+<ol>
+<li><strong>系统里存在什么工具</strong>；</li>
+<li><strong>这次请求向模型展示什么</strong>；</li>
+<li><strong>Harness 最终能调用哪个执行器</strong>。</li>
+</ol>
+<p>三者相关，却不是简单的完整列表。这就解释了为什么同一个 Codex 在不同项目、模型或权限配置下，可用工具可能不同——不是模型临时忘了一个工具，而是本次 StepContext 固定的<strong>工具计划可能不同</strong>。</p>
+<h3 id="工具怎么路由到执行？"><a href="#工具怎么路由到执行？" class="headerlink" title="工具怎么路由到执行？"></a>工具怎么路由到执行？</h3><p>模型生成一条完整调用后，Harness 在本次工具计划中找到对应处理器（ToolRouter）。<strong>工具不存在或参数不合法，就返回错误，不能把模型生成的任意内容直接拿去执行。</strong> 找到处理器后，Harness 把调用参数、会话信息和 StepContext 一起交给处理器。结果走向两个地方：<strong>事件通道</strong>把进展展示给客户端，<strong>ContextManager</strong> 把结果记入历史供下次请求使用。</p>
+<h3 id="审批和沙箱做什么？"><a href="#审批和沙箱做什么？" class="headerlink" title="审批和沙箱做什么？"></a>审批和沙箱做什么？</h3><p>对于执行类工具，Harness 先走一段公共流程：根据当前策略判断<strong>是否需要审批</strong>，再选择<strong>合适的沙箱方式</strong>运行。</p>
+<ul>
+<li><strong>审批</strong>回答：”这个动作要不要额外获得许可？”</li>
+<li><strong>沙箱</strong>限制：”进程能够接触哪些资源？”</li>
+</ul>
+<p>两者不能混为一谈：用户批准某个动作，<strong>不代表进程自动获得无限资源</strong>；沙箱里的执行失败，也<strong>不代表系统会直接提升权限重跑</strong>。只有策略允许时，执行链路才可能请求许可或调整执行方式。</p>
+<h3 id="长进程与-UnifiedExec"><a href="#长进程与-UnifiedExec" class="headerlink" title="长进程与 UnifiedExec"></a>长进程与 UnifiedExec</h3><p>编译、测试或开发服务可能持续很久。要是一次工具调用必须等到进程退出，Agent 就无法在运行中观察新输出，也很难与交互式进程继续通信。</p>
+<p><strong>UnifiedExec 把「一次工具请求」和「一个进程的完整生命周期」分开处理</strong>：负责启动、跟踪进程、收集输出，并处理继续等待、写入输入和取消等操作。第一次调用先返回当前输出和进程标识，底层进程继续运行；后续调用用标识读取新输出或发送输入，直到取得退出状态。</p>
+<blockquote>
+<p>工具调用返回了一段日志，只能说明 Harness 当前拿到了这些内容，<strong>不能直接推断进程已经结束</strong>。</p>
+</blockquote>
+<h3 id="工具如何并发和执行环境？"><a href="#工具如何并发和执行环境？" class="headerlink" title="工具如何并发和执行环境？"></a>工具如何并发和执行环境？</h3><p>模型一次可能提出多个动作，Harness 判断能否并行。可以想象成一道<strong>门</strong>：允许并行的工具拿<strong>共享通行证</strong>一起进去；需单独运行的工具拿<strong>专用通行证</strong>，其他调用在门外等它完成。这道门控制的是<strong>工具分发顺序</strong>，不是给整个文件系统上锁。</p>
+<p>确定工具后还要确定它在哪运行：</p>
+<ul>
+<li>启动进程、读写文件 → <strong>ExecServer</strong>，在本地或远程环境中执行；</li>
+<li>MCP 工具 → 请求各自连接的外部服务；</li>
+<li>内部控制工具 → 直接在运行 Harness 的 Codex 进程里处理。</li>
+</ul>
+<blockquote>
+<p>别被两个相近的名字绕进去：<strong>AppServer</strong> 连接客户端和 Agent 运行核心，负责传递用户请求与执行事件；<strong>ExecServer</strong> 连接工具和执行环境，负责进程与文件操作。两者做的是不同的事。</p>
+<p>工具系统不是一个巨大的 Shell：不同类型的工具走不同的处理程序、权限策略和执行环境，最后把结果送回同一个 Agent 循环。</p>
+</blockquote>
+<hr>
+<h2 id="六、长期记忆怎么形成？"><a href="#六、长期记忆怎么形成？" class="headerlink" title="六、长期记忆怎么形成？"></a>六、长期记忆怎么形成？</h2><h3 id="三种记忆的区别"><a href="#三种记忆的区别" class="headerlink" title="三种记忆的区别"></a>三种记忆的区别</h3><p>先想三个时间点：</p>
+<table>
+<thead>
+<tr>
+<th>时间点</th>
+<th>依赖</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>当前任务进行中</strong></td>
+<td><strong>上下文</strong></td>
+<td>下次模型请求知道刚才读了什么、改了哪里</td>
+</tr>
+<tr>
+<td><strong>重新打开原会话</strong></td>
+<td><strong>持久化历史&#x2F;状态重建</strong></td>
+<td>继续之前的工作</td>
+</tr>
+<tr>
+<td><strong>全新会话</strong></td>
+<td><strong>长期记忆</strong></td>
+<td>把跨任务有价值的项目经验带进新任务</td>
+</tr>
+</tbody></table>
+<p>如果把三者都叫”记忆”，很容易得出错误结论：以为压缩历史是在写长期记忆，以为会话保存后新会话会自动读到全部旧聊天。</p>
+<p>更准确的理解是：</p>
+<ul>
+<li><strong>上下文</strong> —— 服务下一次模型请求；</li>
+<li><strong>持久化历史</strong> —— 服务原会话恢复；</li>
+<li><strong>长期记忆</strong> —— 尝试把跨任务仍有价值的信息带进新任务。</li>
+</ul>
+<h3 id="会话怎么恢复？"><a href="#会话怎么恢复？" class="headerlink" title="会话怎么恢复？"></a>会话怎么恢复？</h3><p>任务运行时，当前本地实现以 <strong>JSONL 保存事件历史</strong>，状态数据库可用时用 <strong>SQLite 保存便于查询的元数据</strong>。重新打开原会话，Harness 先还原已发生的用户消息、模型回复和工具结果，再恢复上下文基线与窗口用量等。</p>
+<p><strong>但恢复有明确边界</strong>：某些等待中的审批、交互对象或运行中的进程，只存在于当时进程内；历史保存了什么，恢复才能重建什么；已发生的文件修改，不会靠重放聊天自动撤销或重执行。</p>
+<h3 id="历史怎么提炼？——后台记忆任务"><a href="#历史怎么提炼？——后台记忆任务" class="headerlink" title="历史怎么提炼？——后台记忆任务"></a>历史怎么提炼？——后台记忆任务</h3><p>长期记忆不能只是”保存更多”，还得先回答：<strong>过去哪些内容值得留下？</strong></p>
+<p>后台记忆任务的启动时机：带输入的新轮次成功启动、运行环境准备好后，尝试调度<strong>后台记忆任务</strong>。启动前要确认：长期记忆已开启、非临时会话或子 Agent 会话、状态数据库可用、账号调用量高于阈值。任一条件不满足就跳过。</p>
+<p>后台流程<strong>先筛选候选</strong>（按会话来源、时间、空闲状态、记忆配置和数量限制），再通过<strong>任务租约抢占处理资格</strong>（可理解成一把有时间限制的锁，时间到自动释放，材料可被后续任务接手）。选中后，模型提炼结构化的原始记忆和任务摘要，目标是留下可复用偏好、有效步骤、失败教训等。<strong>如果这次任务没有值得长期保留的内容，允许没有产出。</strong></p>
+<h3 id="为什么还要整理？"><a href="#为什么还要整理？" class="headerlink" title="为什么还要整理？"></a>为什么还要整理？</h3><p>单任务记忆只是<strong>材料</strong>，还不是容易使用的知识。不同任务可能重复记录同一条命令，也可能保留已变化的项目约定。所以第二阶段做<strong>跨任务整理</strong>：</p>
+<ol>
+<li>取得<strong>全局租约</strong>（给整个整理加锁）；</li>
+<li>选择第一阶段材料，同步到记忆工作区，比较内容是否变化；</li>
+<li>确实需要更新时，启动整理 Agent，整理成几类文件：<ul>
+<li><strong>导航摘要</strong>：告诉模型有哪些经验可查；</li>
+<li><strong>详细记忆</strong>：说明具体内容；</li>
+<li><strong>任务摘要</strong>：帮模型追溯当时做了什么；</li>
+<li><strong>可复用步骤</strong>：记录以后遇到同类任务可以怎么做。</li>
+</ul>
+</li>
+</ol>
+<p>还应避免整理过程再次触发自身。</p>
+<h3 id="新任务怎么读取记忆？"><a href="#新任务怎么读取记忆？" class="headerlink" title="新任务怎么读取记忆？"></a>新任务怎么读取记忆？</h3><p>读取分两步：<strong>先给导航，再按需展开</strong>。把全部记忆塞进去只会让上下文难以控制。</p>
+<ol>
+<li>记忆读取功能启用且存在非空摘要时，把<strong>有限长度的记忆导航和说明注入开发者指令</strong>；</li>
+<li>模型先看到”过去大概有哪些经验”，判断是否相关；</li>
+<li>需要细节时，通过<strong>专用工具搜索详细记忆</strong>，必要时继续读任务摘要和可复用步骤。</li>
+</ol>
+<p>当前本地搜索主要按<strong>文字匹配</strong>，只返回命中位置附近一小段内容。但如果两段话意思相近、用词不同，就可能搜不到。</p>
+<blockquote>
+<p><strong>过去的经验仍然是线索，不是标准答案。</strong> 项目代码和环境可能已变化，模型必须回到当前文件和工具结果上验证，不能把长期记忆当成永远正确的事实库。系统会根据记忆引用等信号记录使用情况（结合时间窗口和数量上限），但使用次数只能说明被引用过，<strong>并不构成自动事实校验机制</strong>。</p>
+</blockquote>
+<hr>
+<h2 id="七、扩展能力怎么接入？"><a href="#七、扩展能力怎么接入？" class="headerlink" title="七、扩展能力怎么接入？"></a>七、扩展能力怎么接入？</h2><h3 id="扩展怎么接入主循环？"><a href="#扩展怎么接入主循环？" class="headerlink" title="扩展怎么接入主循环？"></a>扩展怎么接入主循环？</h3><p>如果每增加一项能力都去改主循环大量代码，Harness 很快难以维护。Codex 内部提供<strong>扩展注册机制</strong>：每个扩展先登记自己会增加什么、要在哪些时机运行——有的往模型输入补充说明，有的增加工具，有的在会话启动、轮次结束等时机执行处理。</p>
+<p>Harness 先登记这些扩展，等准备模型输入、组装工具列表或运行到对应时机时，再调用相应扩展。</p>
+<blockquote>
+<p>注意：这里讲的是<strong>源码内部架构接口</strong>。内部扩展机制解释了核心运行时怎样组织扩展点，不代表所有面向用户的插件、MCP 服务和 Skills 都遵循同一个公开接口。</p>
+</blockquote>
+<h3 id="Skills、MCP-和-Hooks-做什么？"><a href="#Skills、MCP-和-Hooks-做什么？" class="headerlink" title="Skills、MCP 和 Hooks 做什么？"></a>Skills、MCP 和 Hooks 做什么？</h3><table>
+<thead>
+<tr>
+<th>机制</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Skills</strong></td>
+<td>告诉模型某类任务应该怎么做，并提供说明和资源</td>
+</tr>
+<tr>
+<td><strong>MCP</strong></td>
+<td>把外部服务的工具接进来，让模型可请求 Harness 调用</td>
+</tr>
+<tr>
+<td><strong>Hooks</strong></td>
+<td>让程序在指定时机介入（收到用户输入时、工具执行前后、任务准备停止时）</td>
+</tr>
+</tbody></table>
+<p>一个提供做事方法，一个接入工具，一个在特定时机执行处理。</p>
+<h3 id="子-Agent-怎么运行？"><a href="#子-Agent-怎么运行？" class="headerlink" title="子 Agent 怎么运行？"></a>子 Agent 怎么运行？</h3><p>子 Agent 沿用同一套运行架构，也需要会话、上下文、模型循环和工具执行。<strong>多 Agent 机制复用这些核心组件，再增加父子关系、消息传递和并发控制</strong>。</p>
+<p>父 Agent 可以把部分调查任务交给子 Agent，子任务按配置继承相应上下文，独立运行后把结果传回。<strong>独立会话意味着运行状态分开，却不等于文件环境一定隔离</strong>——如果父子 Agent 指向同一工作目录，仍可能看到或修改相同文件；真正需要隔离时，还要配合独立工作目录或相应环境策略。</p>
+<p>核心不变：无论加上 Skill、MCP 还是子 Agent，<strong>本质仍是准备输入 → 请求模型 → 执行动作 → 接收反馈 → 决定下一步</strong>。</p>
+<hr>
+<h2 id="八、总结：一句话回答”Codex-的架构是怎样的？”"><a href="#八、总结：一句话回答”Codex-的架构是怎样的？”" class="headerlink" title="八、总结：一句话回答”Codex 的架构是怎样的？”"></a>八、总结：一句话回答”Codex 的架构是怎样的？”</h2><blockquote>
+<p><strong>Codex 的核心是在大模型外面加了一套 Harness：模型负责判断下一步，Harness 负责把判断变成真实行动。</strong></p>
+</blockquote>
+<p>整体上，Codex 可以分为五个部分：</p>
+<ol>
+<li><strong>客户端接入</strong>（AppServer）</li>
+<li><strong>会话编排</strong>（Session &#x2F; Thread &#x2F; Turn）</li>
+<li><strong>上下文管理</strong>（ContextManager）</li>
+<li><strong>工具执行</strong>（ToolRouter + 审批&#x2F;沙箱 + ExecServer）</li>
+<li><strong>状态与记忆</strong>（持久化历史 + 长期记忆）</li>
+</ol>
+<p>执行流程是一条闭环：请求模型 → 回结果 → 中途需要审批或用户补充信息时先等待 → 收到答复后再继续。</p>
+<p>其中：</p>
+<ul>
+<li><strong>ContextManager</strong> 把规则、历史和工具结果整理给模型；</li>
+<li><strong>ToolRouter</strong> 找到对应的工具处理器；</li>
+<li><strong>执行流程</strong> 按照权限策略处理审批、沙箱和实际操作；</li>
+<li><strong>Session</strong> 保存任务状态、压缩上下文、恢复会话；</li>
+<li><strong>长期记忆</strong> 负责跨任务复用经验。</li>
+</ul>
+<p><strong>整套架构的主线就是一句话：模型决定下一步，Harness 让这一步安全执行，再把结果交给模型继续判断。</strong></p>
+
+    </div>
+    
+    
+    
+    
+    
+    
+    
+</div>
+
+            <footer id="footer">
+    <div id="footer-wrap">
+        <div>
+            &copy;
+            2026 - 2026 Hexo
+            <span id="footer-icon">
+                <i class="fa-solid fa-font-awesome fa-fw"></i>
+            </span>
+            &commat;WJL
+        </div>
+        <div>
+            Based on the <a target="_blank" rel="noopener" href="https://hexo.io">Hexo Engine</a> &amp;
+            <a target="_blank" rel="noopener" href="https://github.com/theme-particlex/hexo-theme-particlex">ParticleX Theme</a>
+        </div>
+        
+    </div>
+</footer>
+
+        </div>
+        
+        <transition name="fade">
+            <div id="preview" ref="preview" v-show="previewShow">
+                <img id="preview-content" ref="previewContent" />
+            </div>
+        </transition>
+        
+    </div>
+    <script src="/js/main.js"></script>
+    
+    
+
+
+
+
+    
+</body>
+</html>

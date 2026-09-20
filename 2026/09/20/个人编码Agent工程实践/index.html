@@ -1,0 +1,452 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>个人编码Agent工程实践 | Hexo</title>
+    <meta name="author" content="WJL" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <link rel="icon" href="/images/avatar.jpg" />
+    <link rel="preconnect" href="https://s4.zstatic.net" />
+<script src="https://s4.zstatic.net/ajax/libs/vue/3.3.7/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.cn" />
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.cn/css2?family=Fira+Code:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap"
+/>
+<script> const mixins = {}; </script>
+
+<script src="https://polyfill.alicdn.com/v3/polyfill.min.js?features=default"></script>
+
+
+<script src="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://s4.zstatic.net/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+<link
+    rel="stylesheet"
+    href="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+/>
+<script src="/js/lib/highlight.js"></script>
+
+
+
+<script src="/js/lib/preview.js"></script>
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.css" />
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+    <div id="layout">
+        <transition name="fade">
+            <div id="loading" v-show="loading">
+                <div id="loading-circle">
+                    <h2>LOADING</h2>
+                    <p>加载过慢请开启缓存 浏览器默认开启</p>
+                    <img src="/images/loading.gif" />
+                </div>
+            </div>
+        </transition>
+        <div id="menu" :class="{ hidden: hiddenMenu, 'menu-color': menuColor}">
+    <nav id="desktop-menu">
+        <a class="title" href="/">
+            <span>HEXO</span>
+        </a>
+        
+        <a href="/">
+            <i class="fa-solid fa-house fa-fw"></i>
+            <span>&ensp;Home</span>
+        </a>
+        
+        <a href="/about">
+            <i class="fa-solid fa-id-card fa-fw"></i>
+            <span>&ensp;About</span>
+        </a>
+        
+        <a href="/archives">
+            <i class="fa-solid fa-box-archive fa-fw"></i>
+            <span>&ensp;Archives</span>
+        </a>
+        
+        <a href="/categories">
+            <i class="fa-solid fa-bookmark fa-fw"></i>
+            <span>&ensp;Categories</span>
+        </a>
+        
+        <a href="/tags">
+            <i class="fa-solid fa-tags fa-fw"></i>
+            <span>&ensp;Tags</span>
+        </a>
+        
+    </nav>
+    <nav id="mobile-menu">
+        <div class="title" @click="showMenuItems = !showMenuItems">
+            <i class="fa-solid fa-bars fa-fw"></i>
+            <span>&emsp;HEXO</span>
+        </div>
+        <transition name="slide">
+            <div class="items" v-show="showMenuItems">
+                
+                <a href="/">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-house fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Home</div>
+                    </div>
+                </a>
+                
+                <a href="/about">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-id-card fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">About</div>
+                    </div>
+                </a>
+                
+                <a href="/archives">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-box-archive fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Archives</div>
+                    </div>
+                </a>
+                
+                <a href="/categories">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-bookmark fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Categories</div>
+                    </div>
+                </a>
+                
+                <a href="/tags">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-tags fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Tags</div>
+                    </div>
+                </a>
+                
+            </div>
+        </transition>
+    </nav>
+</div>
+<transition name="fade">
+    <div id="menu-curtain" @click="showMenuItems = !showMenuItems" v-show="showMenuItems"></div>
+</transition>
+
+        <div id="main" :class="loading ? 'into-enter-from': 'into-enter-active'">
+            <div class="article">
+    <div>
+        <h1>个人编码Agent工程实践</h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2026/9/20
+        </span>
+        
+        
+    </div>
+    
+    <div class="content" v-pre>
+        <h1 id="🛠️-手把手拆解：一个「终端编码助手」的-Agent-工程实践"><a href="#🛠️-手把手拆解：一个「终端编码助手」的-Agent-工程实践" class="headerlink" title="🛠️ 手把手拆解：一个「终端编码助手」的 Agent 工程实践"></a>🛠️ 手把手拆解：一个「终端编码助手」的 Agent 工程实践</h1><blockquote>
+<p>不再是把大模型当成一个「会聊天的 API」，而是把它跑成一支 <strong>自带手、脚、记忆和团队的虚拟工程师</strong>：能读写代码、能跑命令、能在关键操作前征求你同意、能拆子任务并行、还能把学到的东西记进文件。本文从一名 AI Agent 开发工程师的视角，深度解析开源项目 <strong>PersonalCode</strong>（<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">github.com&#x2F;wjl8636&#x2F;Personal-Code-Assistant</a>），凡是代码里真实存在的地方，我都会给出文件路径和关键实现，希望能帮你把「Agent」从概念落到工程。</p>
+</blockquote>
+<hr>
+<h2 id="0-本文你会收获什么"><a href="#0-本文你会收获什么" class="headerlink" title="0. 本文你会收获什么"></a>0. 本文你会收获什么</h2><p>这篇文章不是功能清单，而是围绕一个真实项目梳理 <strong>Agent 工程的核心知识图谱</strong>。我尽量把抽象的概念（ReAct、事件驱动主循环、工具调用、人在回路 HITL、上下文压缩、长期记忆、多智能体编排、可观测性……）都对应到一段真实代码，让你看完能直接用。</p>
+<p>涵盖的主题索引：</p>
+<ul>
+<li>Agent 的<strong>事件驱动主循环</strong>与<strong>事件协议</strong></li>
+<li>统一<strong>工具抽象</strong> <code>Tool</code>（Agent 的「手」）</li>
+<li><strong>流式工具执行 + 并发分批</strong>（读并发 &#x2F; 写串行）</li>
+<li><strong>人在回路（HITL）</strong>：六层权限决策管线</li>
+<li><strong>上下文管理</strong>：auto-compact 与工具结果溢写</li>
+<li><strong>文件级长期记忆</strong>：用户级 &#x2F; 项目级双层</li>
+<li><strong>多智能体 Teams</strong>：Lead–Worker 协调模式</li>
+<li><strong>子 Agent 与 Verification</strong>（Reflexion 式对抗质检）</li>
+<li><strong>技能 Skill（程序记忆）</strong> 与 <strong>MCP 工具扩展</strong></li>
+<li><strong>可观测性</strong>：生命周期 Hooks + 父子 Trace 树</li>
+<li>工程韧性：强制迭代上限、max_tokens 自愈、崩溃恢复</li>
+</ul>
+<hr>
+<h2 id="1-先看一眼：这个系统由什么组成"><a href="#1-先看一眼：这个系统由什么组成" class="headerlink" title="1. 先看一眼：这个系统由什么组成"></a>1. 先看一眼：这个系统由什么组成</h2><p>「PersonalCode」是一整套基于 AI Agent 的 <strong>终端编码助手</strong>。它跑在命令行里，用 Textual 渲染成一个 TUI（文本用户界面），但内核是一条完整的 Agent 能力线，而不只是一个「聊天机器人」：</p>
+<table>
+<thead>
+<tr>
+<th>能力线</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Agent 主循环</strong></td>
+<td>ReAct 引擎：Thought → 工具调用 → Observation → Loop，事件驱动、流式输出</td>
+</tr>
+<tr>
+<td><strong>工具系统</strong></td>
+<td>文件读写、Bash 命令、Glob&#x2F;Grep、子 Agent、团队协作、MCP、技能，统一 <code>Tool</code> 抽象</td>
+</tr>
+<tr>
+<td><strong>权限体系</strong></td>
+<td>4 种模式 × 6 层决策管线，把写文件、跑命令的「开关」交还给人</td>
+</tr>
+<tr>
+<td><strong>多模型接入</strong></td>
+<td><code>anthropic</code> &#x2F; <code>openai</code> &#x2F; <code>openai-compat</code>（DeepSeek、Kimi、GLM、MiniMax…）</td>
+</tr>
+<tr>
+<td><strong>长期记忆</strong></td>
+<td>文件级记忆，用户级 + 项目级双层，自动提取与召回</td>
+</tr>
+<tr>
+<td><strong>多智能体 Teams</strong></td>
+<td>Lead 调度、Worker 执行，支持 in-process &#x2F; tmux &#x2F; iTerm2 三种后端</td>
+</tr>
+<tr>
+<td><strong>上下文管理</strong></td>
+<td>工具结果溢写落盘 + Layer-2 自动压缩（摘要 + 恢复）</td>
+</tr>
+<tr>
+<td><strong>技能 &#x2F; MCP</strong></td>
+<td>Skill 技能包（程序记忆）+ MCP 可插拔工具扩展</td>
+</tr>
+</tbody></table>
+<p>其中以 <strong>Agent 主循环、权限决策、多智能体 Teams、文件级记忆</strong> 最具 Agent 工程代表性，本文作为主线展开，最后补上可观测性、韧性等支线。</p>
+<hr>
+<h2 id="2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎"><a href="#2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎" class="headerlink" title="2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎"></a>2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎</h2><p>整个系统的核心在 <code>personalcode/agent.py</code> 的 <code>Agent</code> 类。它没有把「让大模型干活」藏进一个黑盒函数，而是显式地跑一个 <strong>事件驱动的 ReAct 循环</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    iteration += <span class="number">1</span></span><br><span class="line">    <span class="keyword">if</span> <span class="variable language_">self</span>.max_iterations &gt; <span class="number">0</span> <span class="keyword">and</span> iteration &gt; <span class="variable language_">self</span>.max_iterations:</span><br><span class="line">        <span class="keyword">yield</span> ErrorEvent(...)          <span class="comment"># 强制终止上限</span></span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    <span class="comment"># 1. 注入环境、长期记忆、工具清单、协调/权限 reminder</span></span><br><span class="line">    <span class="comment"># 2. 流式读取 LLM 输出（StreamCollector）</span></span><br><span class="line">    <span class="comment"># 3. 模型一旦发出 tool_use，立刻提交执行（StreamingExecutor）</span></span><br><span class="line">    <span class="comment"># 4. 把 ToolResult 回填进对话历史 → 下一轮循环</span></span><br></pre></td></tr></table></figure>
+
+<p>关键点：<code>Agent.run()</code> 是<strong>异步生成器</strong>，它 <code>yield</code> 的是一系列 <code>AgentEvent</code>。所有对外的「声音」都被建模成了<strong>事件类型联合</strong>（<code>agent.py:161</code>）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">AgentEvent = (</span><br><span class="line">    StreamText | ThinkingText | RetryEvent</span><br><span class="line">    | ToolUseEvent | ToolResultEvent</span><br><span class="line">    | TurnComplete | LoopComplete | UsageEvent</span><br><span class="line">    | ErrorEvent | PermissionRequest</span><br><span class="line">    | CompactNotification | HookEvent</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：事件驱动主循环</strong><br>把「Agent 在干什么」从内部状态变成<strong>可被消费的事件流</strong>，是 Agent 工程的第一性原理。主循环只管 <code>yield</code> 事件，至于上层是 TUI、<code>-p</code> 非交互、还是 WebSocket 远程——都由调用方按需消费。这保证了<strong>同一套 Agent 内核能挂到不同的前端</strong>。</p>
+</blockquote>
+<p><code>__main__.py</code> 里就体现了这种解耦：同一个 <code>Agent.run()</code>，TUI 模式消费它渲染界面，<code>-p</code> 模式用 <code>stream-json</code> 把事件序列化成 NDJSON 喂给脚本。</p>
+<hr>
+<h2 id="3-核心二：工具抽象-——-Agent-长出「手」"><a href="#3-核心二：工具抽象-——-Agent-长出「手」" class="headerlink" title="3. 核心二：工具抽象 —— Agent 长出「手」"></a>3. 核心二：工具抽象 —— Agent 长出「手」</h2><p>一个只会「说话」的 Agent 改不了代码。系统用一套统一的 <code>Tool</code> 抽象（<code>personalcode/tools/base.py</code>）让 Agent 真正拿到外部世界的能力：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Tool</span>(<span class="title class_ inherited__">ABC</span>):</span><br><span class="line">    name: <span class="built_in">str</span></span><br><span class="line">    description: <span class="built_in">str</span></span><br><span class="line">    params_model: <span class="built_in">type</span>[BaseModel]      <span class="comment"># 用 pydantic 描述参数 schema</span></span><br><span class="line">    category: ToolCategory             <span class="comment"># &quot;read&quot; | &quot;write&quot; | &quot;command&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">is_concurrency_safe</span>(<span class="params">self, args</span>):  <span class="comment"># 按本次调用的实际参数判断能否并发</span></span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">self</span>.is_read_only</span><br><span class="line"></span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">execute</span>(<span class="params">self, params: BaseModel</span>) -&gt; ToolResult: ...</span><br></pre></td></tr></table></figure>
+
+<p>内置工具用 <code>create_default_registry()</code>（<code>tools/__init__.py:182</code>）装配：<code>ReadFile</code>、<code>WriteFile</code>、<code>EditFile</code>、<code>Bash</code>、<code>Glob</code>、<code>Grep</code>，再加上 <code>Agent</code>（派子 Agent）、<code>ToolSearch</code>、<code>mcp_call</code>、<code>SendMessage</code>、<code>TaskCreate</code> 等高级工具。</p>
+<blockquote>
+<p><strong>知识点：工具是 Agent 的「外设总线」</strong><br>把每个能力封装成 <code>name + description + params_model + execute()</code> 四件套，<code>params_model</code> 直接用 pydantic——<strong>schema 和校验二合一</strong>。新增一个工具 &#x3D; 新增一个类注册进去，Agent 就会在下一轮自动看到它的 schema 并学会调用。</p>
+</blockquote>
+<p>一个被代码注释反复强调的细节是 <code>is_concurrency_safe</code> 不看类别、看<strong>实际参数</strong>：<code>ls</code> 和 <code>rm</code> 都是 <code>Bash</code>，前者可以并发、后者必须独占（<code>tools/base.py:56</code>）。这是后面并发分批的决策依据。</p>
+<hr>
+<h2 id="4-核心三：流式工具执行-并发分批"><a href="#4-核心三：流式工具执行-并发分批" class="headerlink" title="4. 核心三：流式工具执行 + 并发分批"></a>4. 核心三：流式工具执行 + 并发分批</h2><p>Agent 一轮可能同时发出好几个工具调用。这里有个很微妙的工程问题：<strong>要不要等整个 LLM 响应流结束再执行工具？</strong> 如果等，用户会看到「思考思考……（十几秒）……刷地一下全干完」；如果不等、收到就跑，又会破坏模型给出的执行顺序（比如 WriteFile 之后紧跟一条依赖它的 Bash）。</p>
+<p>PersonalCode 的解法是 <code>StreamingExecutor</code>（<code>agent.py:280</code>）：<strong>在 LLM 流式输出期间就收集工具调用，等流结束后再按「并发安全的批」统一执行</strong>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">partition_tool_calls</span>(<span class="params">tool_calls, registry</span>) -&gt; <span class="built_in">list</span>[ToolBatch]:</span><br><span class="line">    <span class="comment"># 相邻的并发安全调用归到同一批并发跑，其余各自独占一个串行批</span></span><br><span class="line">    <span class="keyword">for</span> tc <span class="keyword">in</span> tool_calls:</span><br><span class="line">        safe = tool.is_concurrency_safe(tc.arguments)</span><br><span class="line">        <span class="keyword">if</span> safe <span class="keyword">and</span> batches <span class="keyword">and</span> batches[-<span class="number">1</span>].concurrent:</span><br><span class="line">            batches[-<span class="number">1</span>].calls.append(tc)      <span class="comment"># 并入当前并发批</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            batches.append(ToolBatch(concurrent=safe, calls=[tc]))</span><br></pre></td></tr></table></figure>
+
+<p>只读批用 <code>asyncio.gather</code> 并发执行，写&#x2F;命令批严格串行，<strong>批内有序、批间有序</strong>，所以拼回来的结果顺序就是模型给出的顺序。</p>
+<blockquote>
+<p><strong>知识点：工具调度的并发安全</strong><br>工具调度不是「全并发」也不是「全串行」，而是<strong>按数据依赖分批</strong>：只读不互扰的并发，会改状态的串行。既保住吞吐，又保住语义，这是生产级 Agent 的标配取舍。</p>
+</blockquote>
+<hr>
+<h2 id="5-核心四：人在回路（HITL）——-六层权限决策管线"><a href="#5-核心四：人在回路（HITL）——-六层权限决策管线" class="headerlink" title="5. 核心四：人在回路（HITL）—— 六层权限决策管线"></a>5. 核心四：人在回路（HITL）—— 六层权限决策管线</h2><p>PersonalCode 最鲜明的工程特质是<strong>把控制权交还给人</strong>。默认权限模式下，写文件和跑命令前都会先征求你的同意。这套逻辑在 <code>personalcode/permissions/checker.py</code> 的 <code>PermissionChecker.check()</code> 里，是一条 <strong>6 层决策管线</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">check</span>(<span class="params">self, tool, arguments</span>) -&gt; Decision:</span><br><span class="line">    <span class="comment"># Layer 0: Plan 模式例外放行（只允许 Agent/ToolSearch/AskUserQuestion/ExitPlanMode）</span></span><br><span class="line">    <span class="comment"># Layer 1: 安全的只读命令自动放行</span></span><br><span class="line">    <span class="comment"># Layer 1b: 危险命令黑名单（危险命令拦截，直接 deny）</span></span><br><span class="line">    <span class="comment"># Layer 1c: OS 沙箱开启时命令自动放行（内核兜底）</span></span><br><span class="line">    <span class="comment"># Layer 2: 路径沙箱（只读/写文件，受保护路径一律拒绝）</span></span><br><span class="line">    <span class="comment"># Layer 3: 规则引擎匹配（allow/ask/deny）</span></span><br><span class="line">    <span class="comment"># Layer 4: 权限模式兜底判定（default / acceptEdits / plan / bypassPermissions）</span></span><br><span class="line">    <span class="comment"># Layer 5: 触发人工确认（HITL）→ 弹 PermissionRequest</span></span><br></pre></td></tr></table></figure>
+
+<p>配合 <code>permissions/modes.py</code> 的四模式矩阵：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>读</th>
+<th>写</th>
+<th>命令</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>default</code></td>
+<td>自动</td>
+<td><strong>ask</strong></td>
+<td><strong>ask</strong></td>
+</tr>
+<tr>
+<td><code>acceptEdits</code></td>
+<td>自动</td>
+<td>自动</td>
+<td><strong>ask</strong></td>
+</tr>
+<tr>
+<td><code>plan</code></td>
+<td>自动</td>
+<td>ask</td>
+<td>ask</td>
+</tr>
+<tr>
+<td><code>bypassPermissions</code></td>
+<td>自动</td>
+<td>自动</td>
+<td>自动</td>
+</tr>
+</tbody></table>
+<p>这里有两个非常「Agent 味」的设计：</p>
+<p><strong>① 拒绝也带反馈。</strong> 用户拒绝时还能附一句话（<code>PermissionReply.feedback</code>），这句反馈会被拼进拒绝结果交给模型，让它按你的要求<strong>换个做法</strong>——而不是简单地说「不行」（<code>agent.py:144</code>、<code>conversation_pairing.py</code> 的 <code>rejected_tool_result</code>）。</p>
+<p><strong>② 允许则落地为规则。</strong> 选了 <code>ALLOW_ALWAYS</code> 时，系统把这次操作写进本地规则文件（<code>agent.py:1023</code>），规则引擎每次评估现读现匹配——<strong>这一轮之后即刻生效</strong>，从此这条命令免确认。</p>
+<blockquote>
+<p><strong>知识点：Agent 的工具护栏（Guardrails）</strong><br>让 Agent 拥有写文件、跑命令的能力，就必须有<strong>分层护栏</strong>：危险命令黑名单、路径沙箱、规则引擎、权限模式、最终人工确认，一层层收敛。真正面向用户的产品，Agent 的「权力」永远是<strong>受约束的、可解释的、可被否决的</strong>。</p>
+</blockquote>
+<hr>
+<h2 id="6-核心五：上下文管理-——-auto-compact-与工具结果溢写"><a href="#6-核心五：上下文管理-——-auto-compact-与工具结果溢写" class="headerlink" title="6. 核心五：上下文管理 —— auto-compact 与工具结果溢写"></a>6. 核心五：上下文管理 —— auto-compact 与工具结果溢写</h2><p>长会话最大的敌人是上下文窗口。PersonalCode 做了<strong>两层防御</strong>（<code>context/</code>）：</p>
+<p><strong>Layer 1：工具结果溢写落盘。</strong> 单条工具输出超过 <code>MAX_OUTPUT_CHARS = 50000</code> 字符时，完整内容写盘，对话历史里只保留预览和文件路径（<code>tools/base.py:23</code>、<code>agent.py:1387</code> 的 <code>_maybe_persist_or_truncate</code>）。模型要全文就自己再 ReadFile——既保住上下文，又不丢信息。</p>
+<p><strong>Layer 2：auto-compact 自动压缩。</strong> 接近 context window 上限时，用一次 LLM 调用把对话压成摘要（<code>agent.py:645</code>、<code>context</code> 的 <code>auto_compact</code>）。压缩不是裸丢历史，而是保存一个 <code>RecoveryState</code>——把最近读过的文件和调过的 skill 快照下来，压缩后能<strong>重建工作上下文</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_snapshot_for_recovery</span>(<span class="params">self, tc, result</span>):   <span class="comment"># agent.py:1063</span></span><br><span class="line">    <span class="keyword">if</span> tc.tool_name != <span class="string">&quot;ReadFile&quot;</span>: <span class="keyword">return</span>       <span class="comment"># 只快照 ReadFile</span></span><br><span class="line">    <span class="variable language_">self</span>.recovery_state.record_file_read(path, content)</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：Agent 的上下文管理策略</strong><br>上下文不是「满了就完蛋」，而是可以<strong>分层治理</strong>：超大的工具结果溢写落盘、过长的历史摘要压缩、关键工作上下文做恢复快照。这三点合起来，才能让一个 Agent 在一轮几百次工具调用的长任务里不「失忆」。</p>
+</blockquote>
+<hr>
+<h2 id="7-核心六：文件级长期记忆-——-用户级-项目级双层"><a href="#7-核心六：文件级长期记忆-——-用户级-项目级双层" class="headerlink" title="7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层"></a>7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层</h2><p>PersonalCode 的记忆不是塞在数据库向量里，而是<strong>用普通 Markdown 文件组织</strong>（<code>personalcode/memory/auto_memory.py</code>）。每条记忆一个 <code>.md</code>，带 frontmatter：</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">name: my-kebab-case-name</span><br><span class="line">description: 一句话描述</span><br><span class="line"><span class="section">type: user | feedback | project | reference   # 类型决定存到哪个目录</span></span><br><span class="line"><span class="section">---</span></span><br><span class="line">正文内容…</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>用户级</strong>（<code>~/.personalcode/memory/</code>）：<code>user</code> &#x2F; <code>feedback</code> 类型，跨项目跟随你。</li>
+<li><strong>项目级</strong>（<code>&lt;project&gt;/.personalcode/memory/</code>）：<code>project</code> &#x2F; <code>reference</code> 类型，可提交进 git 团队共享。</li>
+</ul>
+<p>两个目录各自维护一份 <code>MEMORY.md</code> 索引（<code>ENTRYPOINT_NAME</code>），且<strong>带截断保护</strong>（<code>auto_memory.py:156</code>）：超过 200 行或 25KB 就截断并加 WARNING——索引太长会占掉大量上下文。</p>
+<p>自动提取也做了 <strong>去重</strong>：<code>MemoryManager.extract()</code>（<code>auto_memory.py:410</code>）每次提取前先扫描已有记忆生成 manifest 喂给 LLM，「能更新已有文件就别新建重复的」。提取由主循环定期触发（<code>agent.py:747</code> 每轮检查），并且有<strong>合并策略</strong>防止并发重复提取。</p>
+<blockquote>
+<p><strong>知识点：Agent 记忆分级</strong><br>记忆分三类：<strong>工作记忆</strong>（当前上下文窗口）、<strong>长期记忆</strong>（跨 session 的文件）、<strong>程序记忆</strong>（技能&#x2F;工具&#x2F;策略）。文件级记忆的妙处是<strong>人可读、可 diff、可 git 提交</strong>——记忆不是玄学，而是仓库里普通的管理文件。</p>
+</blockquote>
+<hr>
+<h2 id="8-核心七：多智能体-Teams-——-Lead–Worker-协调模式"><a href="#8-核心七：多智能体-Teams-——-Lead–Worker-协调模式" class="headerlink" title="8. 核心七：多智能体 Teams —— Lead–Worker 协调模式"></a>8. 核心七：多智能体 Teams —— Lead–Worker 协调模式</h2><p>这是本项目「最有 Agent 味」的能力。PersonalCode 支持把一次编码任务组织成一支<strong>团队</strong>：Lead 负责调度、拆解、汇总，Worker 负责并行研究 &#x2F; 实现 &#x2F; 验证。整套编排逻辑写在 <code>teams/coordinator.py</code> 的 <code>get_coordinator_system_prompt()</code> 里——它本身就是给 Lead 的 system prompt，把「怎么当好一个调度者」讲得非常细：</p>
+<ul>
+<li><strong>Worker 看不到你的对话</strong>，所以每条子任务 prompt 必须<strong>自包含</strong>（含文件路径、行号、要改成什么）。</li>
+<li><strong>绝不让实现 Worker 验证自己的工作</strong>，必须另派一个只读的 <code>Verification</code> Worker 用「fresh eyes」查 bug。</li>
+<li><strong>按上下文重叠决定 continue vs spawn</strong>：研究已覆盖目标文件就 <code>SendMessage</code> 续写，探索过宽就新派一个干净的。</li>
+</ul>
+<p>还专门处理了<strong>长会话漂移</strong>问题（<code>coordinator.py:211</code>）：那份 8KB 的调度指引首轮全文注入，之后每 5 轮才复述一次全文，中间轮只发精简版 <code>COORDINATOR_SPARSE_REMINDER</code>，避免重复内容把省下来的上下文又填回去。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">get_coordinator_reminder</span>(<span class="params">iteration, agent_catalog=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="keyword">if</span> iteration &lt;= <span class="number">1</span> <span class="keyword">or</span> (iteration - <span class="number">1</span>) % REMINDER_INTERVAL == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> get_coordinator_system_prompt(agent_catalog=agent_catalog)  <span class="comment"># 全文</span></span><br><span class="line">    <span class="keyword">return</span> COORDINATOR_SPARSE_REMINDER                                     <span class="comment"># 精简版</span></span><br></pre></td></tr></table></figure>
+
+<p>Worker 之间的通信走<strong>邮箱 + 共享任务板</strong>：Lead 派活写入邮箱，Worker 主循环用 <code>_consume_mailbox</code>（<code>agent.py:893</code>）在每轮迭代开始时消费；队员通过 <code>TaskCreate/TaskGet/TaskUpdate</code> 读写团队共享的 <code>tasks.json</code>。多 Agent 后端支持 <code>in-process</code> &#x2F; <code>tmux</code> &#x2F; <code>iTerm2</code> 三种 spawn 方式（<code>teams/models.py</code> 的 <code>BackendType</code>）。</p>
+<blockquote>
+<p><strong>知识点：协调者模式（Coordinator）</strong><br>处理复杂长任务时，「一个超大 Agent」不如「一个调度者 + 多个专职 Worker」：调度者上下文里只放<strong>任务分解、Worker 状态、汇总</strong>，具体脏活分给专用 Worker。代价是<strong>交接契约</strong>要极其清晰（自包含 prompt、结构化通知、按名寻址），这正是 Lead prompt 花大篇幅写「怎么写好 Worker prompt」的原因。</p>
+</blockquote>
+<hr>
+<h2 id="9-核心八：子-Agent-与-Verification-——-Reflexion-式对抗质检"><a href="#9-核心八：子-Agent-与-Verification-——-Reflexion-式对抗质检" class="headerlink" title="9. 核心八：子 Agent 与 Verification —— Reflexion 式对抗质检"></a>9. 核心八：子 Agent 与 Verification —— Reflexion 式对抗质检</h2><p>除了平级的 Teams，PersonalCode 还有<strong>父子子 Agent</strong>：主 Agent 可以通过 <code>Agent</code> 工具派子 Agent。子 Agent 定义也是 Markdown 文件（<code>agents/loader.py</code>），按 <strong>项目级 → 用户级 → 内置</strong> 三层加载，支持热重载。</p>
+<p>内置了 <code>Verification</code> 这种<strong>只读质检型 Agent</strong>（<code>agents/builtins/verification.md</code>），由 <code>enable_verification_agent</code> 配置控制是否启用（<code>agents/loader.py:83</code>）。它「cannot edit files, focuses on finding bugs」——专门用 fresh eyes 挑毛病，这正接近 <strong>Reflexion（反思）</strong> 范式：不让干活的 Agent 自己验收自己，而是让一个独立的、只读的审查者去攻击结果。</p>
+<p>配合 <code>/review</code> 命令，能把当前代码变更丢给模型做<strong>对抗式代码审查</strong>。子 Agent 的调用关系被完整记录下来（见第 11 节的 trace 树），可通过 <code>/trace</code> 查看父子追踪。</p>
+<blockquote>
+<p><strong>知识点：独立验证者（Verification）</strong><br>实现者对自己代码天然有「锚定偏见」，会 rubber-stamp。把验证拆成<strong>独立的、只读的、专门找茬的 Agent</strong>，用 fresh eyes 去看同一份代码，是提升 Agent 产出质量最高性价比的手段之一。</p>
+</blockquote>
+<hr>
+<h2 id="10-核心九：技能-Skill（程序记忆）与-MCP-工具扩展"><a href="#10-核心九：技能-Skill（程序记忆）与-MCP-工具扩展" class="headerlink" title="10. 核心九：技能 Skill（程序记忆）与 MCP 工具扩展"></a>10. 核心九：技能 Skill（程序记忆）与 MCP 工具扩展</h2><p>Agent 的「程序记忆」——怎么做一件特定的事——被建模成了 <strong>Skill 技能包</strong>（<code>skills/</code>）：一个带 YAML frontmatter 的 <code>SKILL.md</code>，项目级（<code>.personalcode/skills</code>）、用户级、内置三层加载，用 <code>/skill</code> 命令管理。内置了 <code>frontend-design</code>、<code>skill-creator</code> 示例。</p>
+<p>而<strong>外部工具的扩展</strong>走 <strong>MCP（Model Context Protocol）</strong>：可插拔的服务器可以是 stdio 子进程，也可以是 Streamable HTTP（<code>mcp/</code>）。MCP 服务器动辄几十个工具、schema 又长，所以 PersonalCode 引入 <strong>ToolSearch 延迟加载</strong>（<code>tools/__init__.py</code> 的 <code>ToolRegistry</code>、<code>mcp/loading_strategy.py</code>）：</p>
+<ul>
+<li>默认<strong>不</strong>把全部 MCP 工具塞进初始 <code>tools[]</code>（会占掉一大块上下文）。</li>
+<li>模型需要用哪个工具，先调 <code>ToolSearch</code> 把对应 schema「捞」出来，再通过 <code>mcp_call</code> 真正调用。</li>
+<li>何时暴露检索&#x2F;分发工具、以何种加载模式（eager &#x2F; native &#x2F; dispatch）适配不同端点，由 <code>loading_strategy.py</code> 按上下文窗口与 schema 总量决策。</li>
+</ul>
+<blockquote>
+<p><strong>知识点：工具的按需加载（Lazy Loading）</strong><br>工具 schema 本身也占 token。与其把几百个工具的 schema 全塞进上下文，不如<strong>按需检索、按需加载</strong>——这是长上下文 + 大规模工具集并存时的关键优化。</p>
+</blockquote>
+<hr>
+<h2 id="11-可观测性：生命周期-Hooks-与父子-Trace-树"><a href="#11-可观测性：生命周期-Hooks-与父子-Trace-树" class="headerlink" title="11. 可观测性：生命周期 Hooks 与父子 Trace 树"></a>11. 可观测性：生命周期 Hooks 与父子 Trace 树</h2><p>一个健壮的 Agent 系统必须<strong>把「它在想什么、在做什么」变成可观测的事件流</strong>。PersonalCode 从两个维度做可观测：</p>
+<p><strong>① Hooks 事件协议（<code>hooks/events.py</code>）。</strong> 定义了五层生命周期事件：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">LifecycleEvent</span>(<span class="title class_ inherited__">StrEnum</span>):</span><br><span class="line">    SESSION_START / SESSION_END      <span class="comment"># 会话级</span></span><br><span class="line">    TURN_START / TURN_END            <span class="comment"># 轮次级</span></span><br><span class="line">    PRE_TOOL_USE / POST_TOOL_USE     <span class="comment"># 工具级</span></span><br><span class="line">    PRE_SEND / POST_RECEIVE          <span class="comment"># 消息级</span></span><br><span class="line">    STARTUP / SHUTDOWN / ERROR / COMPACT / PERMISSION_REQUEST / FILE_CHANGE / COMMAND_EXECUTE  <span class="comment"># 系统级</span></span><br></pre></td></tr></table></figure>
+
+<p>主循环在这些节点 <code>yield HookEvent</code>，<code>HookEngine</code> 可接自定义执行器，钩子的输出还会被注入回对话上下文——实现了「钩子既是观察点，又是干预点」。</p>
+<p><strong>② Trace 树（<code>agents/trace.py</code>）。</strong> 每个 Agent 实例都有 <code>agent_id</code>，子 Agent 记录 <code>parent_id</code>，归属同一 <code>trace_id</code>，形成一棵<strong>父子调用树</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">TraceNode</span>:</span><br><span class="line">    agent_id: <span class="built_in">str</span></span><br><span class="line">    parent_id: <span class="built_in">str</span> | <span class="literal">None</span></span><br><span class="line">    trace_id: <span class="built_in">str</span></span><br><span class="line">    input_tokens: <span class="built_in">int</span>; output_tokens: <span class="built_in">int</span></span><br><span class="line">    tool_call_count: <span class="built_in">int</span>; status: <span class="built_in">str</span></span><br></pre></td></tr></table></figure>
+
+<p><code>TraceManager.get_tree(trace_id)</code> 能聚合整棵树的 token 消耗——<code>/trace</code> 命令把它渲染出来，让你看清「这一轮任务是谁派给谁、谁烧了多少 token」。</p>
+<blockquote>
+<p><strong>知识点：Agent 的可观测性</strong><br>主循环事件流 &#x3D; 实时「它在干嘛」；trace 树 &#x3D; 事后「它是怎么派生的、烧了多少」。两者配合，一个多智能体系统才不是黑盒——这是排障、计费、调优的地基。</p>
+</blockquote>
+<hr>
+<h2 id="12-工程韧性：那些让-Agent-真正能用的「脏活」"><a href="#12-工程韧性：那些让-Agent-真正能用的「脏活」" class="headerlink" title="12. 工程韧性：那些让 Agent 真正能用的「脏活」"></a>12. 工程韧性：那些让 Agent 真正能用的「脏活」</h2><p>华丽的能力之外，拉开生产级与 Demo 差距的，都是不起眼的工程韧性：</p>
+<ul>
+<li><strong>强制迭代上限</strong>。主循环 <code>max_iterations &gt; 0 and iteration &gt; max_iterations</code>（<code>agent.py:584</code>）保证系统<strong>一定在有限步内终止</strong>，不会烧光预算。</li>
+<li><strong>max_tokens 自愈</strong>。<code>stop_reason == &quot;max_tokens&quot;</code> 时先升级输出上限（<code>MAX_TOKENS_CEILING</code>），再触发「断点续写」重试，最多恢复 <code>MAX_OUTPUT_TOKENS_RECOVERIES</code> 次（<code>agent.py:713</code>）。</li>
+<li><strong>崩溃恢复</strong>。<code>crashlog.py</code> 把异常落盘，<code>__main__.py</code> 兜住框架之外的部分；会话以 <code>jsonl</code> 存到 <code>.personalcode/sessions/</code>，<code>/rewind</code> + 文件历史可回溯到任意检查点。</li>
+<li><strong>工具错误不炸循环</strong>。单个工具失败被收成一条带 <code>tool_id</code> 的 <code>ToolResult(is_error=True)</code>（<code>agent.py:301</code> 的 <code>_error_result</code>）喂回模型，让它自己换个做法，而不是中断整轮。</li>
+<li><strong>Worktree 隔离</strong>。多 Agent 并行改代码时用 git worktree 隔离（<code>worktree/</code>），互不踩踏。</li>
+</ul>
+<hr>
+<h2 id="13-架构全景回顾"><a href="#13-架构全景回顾" class="headerlink" title="13. 架构全景回顾"></a>13. 架构全景回顾</h2><p>把上述各线拼起来，整个 Agent 系统的架构就是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────── 前端：Textual TUI ｜ 浏览器(WebSocket) ｜ -p 非交互 / stream-json ───────────────────────┐</span><br><span class="line">│  流式输出 · 思考 · 工具调用进度 · 权限弹窗 · 多智能体调度指示 · 父子 Trace 树                                  │</span><br><span class="line">└─────────────────────────────────────────────▲ AgentEvent 事件流 ──────────────────────────────────────┘</span><br><span class="line">┌────────────────────────────────────────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                                     Agent 主循环（agent.py）—— ReAct                                │</span><br><span class="line">│    Thought → ToolUse(并发分批) → 权限决策(6层 HITL) → ToolResult(溢写落盘) → Observation → Loop       │</span><br><span class="line">│    · StreamingExecutor 流式执行 · auto-compact(摘要+恢复) · 记忆自动提取 · max_tokens 自愈            │</span><br><span class="line">└──────┬──────────────┬───────────────┬───────────────┬────────────────┬────────────────────────────┘</span><br><span class="line">       ▼              ▼               ▼               ▼                ▼</span><br><span class="line">    工具系统         权限决策         长期记忆         多智能体 Teams    MCP / Skill 扩展</span><br><span class="line">    (tools/)        (permissions/)   (memory/)       (teams/)        (mcp/ skills/)</span><br><span class="line">   Read/Write/Edit  4模式×6层管线     用户级/项目级    Lead→Worker      ToolSearch 延迟加载</span><br><span class="line">   Bash/Glob/Grep   危险命令黑名单     MEMORY.md索引    邮箱/共享任务     可插拔服务器</span><br><span class="line">   Agent子Agent      路径沙箱+规则     自动提取去重      Verification     程序记忆</span><br><span class="line">       ▼</span><br><span class="line">   异构 LLM（anthropic / openai / openai-compat）· 自动探测 context window</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="14-Agent-工程师的几点心得"><a href="#14-Agent-工程师的几点心得" class="headerlink" title="14. Agent 工程师的几点心得"></a>14. Agent 工程师的几点心得</h2><ol>
+<li><strong>事件驱动，而非黑盒函数。</strong> 把 Agent 的每一步（思考、用工具、要授权、压缩上下文）都 <code>yield</code> 成事件，内核就能挂 TUI、CLI、WebSocket 任意前端，可观测性和复用性一起拿到。</li>
+<li><strong>先定工具的契约，再谈智能。</strong> 一套 <code>Tool</code> 抽象（schema + 校验 + 并发安全 + 分类）是整个系统地基。工具的 <code>is_concurrency_safe</code> 看参数不看类别，这是并发调度正确性的关键。</li>
+<li><strong>Agent 的「权力」必须受约束。</strong> 写文件、跑命令的能力配上六层权限管线 + 拒绝带反馈 + 允许落规则，才能既强大又可被人类否决。</li>
+<li><strong>上下文是稀缺资源，要分层治理。</strong> 大结果溢写落盘、长历史摘要压缩、工作上下文做恢复快照、MCP 工具按需加载——每一处都在给上下文窗口「精打细算」。</li>
+<li><strong>复杂任务交给协调者 + 专职 Worker。</strong> 调度者只放任务分解和汇总，脏活分给只读验证等专用 Worker；用独立的 Verification Agent 对抗式质检，别让实现者自己验收。</li>
+<li><strong>记忆和可观测性一起建。</strong> 文件级记忆让 Agent「记得你」且人可审计；trace 树 + 事件流让它「可解释、可排障、可计费」。</li>
+<li><strong>永远有终止条件。</strong> 任何重试 &#x2F; 反思 &#x2F; 迭代循环都要有硬性上限，否则一次失控就烧光预算。</li>
+</ol>
+<hr>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 克隆并安装（要求 Python ≥ 3.11，推荐 uv）</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/wjl8636/Personal-Code-Assistant.git</span><br><span class="line"><span class="built_in">cd</span> Personal-Code-Assistant</span><br><span class="line">uv <span class="built_in">sync</span> --group dev</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 配置模型 Provider</span></span><br><span class="line"><span class="built_in">cp</span> .personalcode/config.yaml.example .personalcode/config.yaml</span><br><span class="line"><span class="comment">#    编辑 providers：填 anthropic / openai / openai-compat（DeepSeek、Kimi…）的 api_key 与 model</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 启动</span></span><br><span class="line">personalcode                                    <span class="comment"># 交互式 TUI</span></span><br><span class="line">personalcode -p <span class="string">&quot;解释这个仓库的架构&quot;</span>              <span class="comment"># 非交互模式</span></span><br><span class="line">personalcode --remote                           <span class="comment"># 浏览器访问 http://localhost:18888</span></span><br><span class="line">personalcode --mode bypassPermissions           <span class="comment"># 覆盖权限模式</span></span><br></pre></td></tr></table></figure>
+
+<p>跑起来后，试着用 <code>/trace</code> 看一次任务的父子调用树，用 <code>/memory</code> 看它记住了你什么，再给 <code>Teams</code> 派一个跨模块的重构任务，看 Lead 如何拆解、Worker 如何并行、Verification 如何回来挑刺。</p>
+<hr>
+<p><em>本文内容均基于项目源码（<code>personalcode/agent.py</code>、<code>tools/</code>、<code>permissions/</code>、<code>memory/</code>、<code>teams/</code> 等）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">https://github.com/wjl8636/Personal-Code-Assistant</a></em> ⭐</p>
+
+    </div>
+    
+    
+    
+    
+    
+    
+    
+</div>
+
+            <footer id="footer">
+    <div id="footer-wrap">
+        <div>
+            &copy;
+            2026 - 2026 Hexo
+            <span id="footer-icon">
+                <i class="fa-solid fa-font-awesome fa-fw"></i>
+            </span>
+            &commat;WJL
+        </div>
+        <div>
+            Based on the <a target="_blank" rel="noopener" href="https://hexo.io">Hexo Engine</a> &amp;
+            <a target="_blank" rel="noopener" href="https://github.com/theme-particlex/hexo-theme-particlex">ParticleX Theme</a>
+        </div>
+        
+    </div>
+</footer>
+
+        </div>
+        
+        <transition name="fade">
+            <div id="preview" ref="preview" v-show="previewShow">
+                <img id="preview-content" ref="previewContent" />
+            </div>
+        </transition>
+        
+    </div>
+    <script src="/js/main.js"></script>
+    
+    
+
+
+
+
+    
+</body>
+</html>

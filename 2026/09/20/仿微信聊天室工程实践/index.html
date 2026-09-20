@@ -1,0 +1,500 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>仿微信聊天室工程实践 | Hexo</title>
+    <meta name="author" content="WJL" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <link rel="icon" href="/images/avatar.jpg" />
+    <link rel="preconnect" href="https://s4.zstatic.net" />
+<script src="https://s4.zstatic.net/ajax/libs/vue/3.3.7/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.cn" />
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.cn/css2?family=Fira+Code:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap"
+/>
+<script> const mixins = {}; </script>
+
+<script src="https://polyfill.alicdn.com/v3/polyfill.min.js?features=default"></script>
+
+
+<script src="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://s4.zstatic.net/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+<link
+    rel="stylesheet"
+    href="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+/>
+<script src="/js/lib/highlight.js"></script>
+
+
+
+<script src="/js/lib/preview.js"></script>
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.css" />
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+    <div id="layout">
+        <transition name="fade">
+            <div id="loading" v-show="loading">
+                <div id="loading-circle">
+                    <h2>LOADING</h2>
+                    <p>加载过慢请开启缓存 浏览器默认开启</p>
+                    <img src="/images/loading.gif" />
+                </div>
+            </div>
+        </transition>
+        <div id="menu" :class="{ hidden: hiddenMenu, 'menu-color': menuColor}">
+    <nav id="desktop-menu">
+        <a class="title" href="/">
+            <span>HEXO</span>
+        </a>
+        
+        <a href="/">
+            <i class="fa-solid fa-house fa-fw"></i>
+            <span>&ensp;Home</span>
+        </a>
+        
+        <a href="/about">
+            <i class="fa-solid fa-id-card fa-fw"></i>
+            <span>&ensp;About</span>
+        </a>
+        
+        <a href="/archives">
+            <i class="fa-solid fa-box-archive fa-fw"></i>
+            <span>&ensp;Archives</span>
+        </a>
+        
+        <a href="/categories">
+            <i class="fa-solid fa-bookmark fa-fw"></i>
+            <span>&ensp;Categories</span>
+        </a>
+        
+        <a href="/tags">
+            <i class="fa-solid fa-tags fa-fw"></i>
+            <span>&ensp;Tags</span>
+        </a>
+        
+    </nav>
+    <nav id="mobile-menu">
+        <div class="title" @click="showMenuItems = !showMenuItems">
+            <i class="fa-solid fa-bars fa-fw"></i>
+            <span>&emsp;HEXO</span>
+        </div>
+        <transition name="slide">
+            <div class="items" v-show="showMenuItems">
+                
+                <a href="/">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-house fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Home</div>
+                    </div>
+                </a>
+                
+                <a href="/about">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-id-card fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">About</div>
+                    </div>
+                </a>
+                
+                <a href="/archives">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-box-archive fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Archives</div>
+                    </div>
+                </a>
+                
+                <a href="/categories">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-bookmark fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Categories</div>
+                    </div>
+                </a>
+                
+                <a href="/tags">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-tags fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Tags</div>
+                    </div>
+                </a>
+                
+            </div>
+        </transition>
+    </nav>
+</div>
+<transition name="fade">
+    <div id="menu-curtain" @click="showMenuItems = !showMenuItems" v-show="showMenuItems"></div>
+</transition>
+
+        <div id="main" :class="loading ? 'into-enter-from': 'into-enter-active'">
+            <div class="article">
+    <div>
+        <h1>仿微信聊天室工程实践</h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2026/9/20
+        </span>
+        
+        
+    </div>
+    
+    <div class="content" v-pre>
+        <h1 id="🚀-手把手拆解：一个前后端分离的分布式仿微信即时通讯系统"><a href="#🚀-手把手拆解：一个前后端分离的分布式仿微信即时通讯系统" class="headerlink" title="🚀 手把手拆解：一个前后端分离的分布式仿微信即时通讯系统"></a>🚀 手把手拆解：一个前后端分离的分布式仿微信即时通讯系统</h1><blockquote>
+<p>这不只是一个「会聊天的 Demo」，而是一个把<strong>登录鉴权、长连接、消息持久化、在线投递、进程内消息总线、Kafka 消息队列、社交关系、后台管理</strong>全部串起来的前后端分离 IM 系统。本文从一名 <strong>Go 后端开发工程师</strong> 的视角，深度解析开源项目 <strong>KamaChat（仿微信聊天室）</strong>（<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Chat">github.com&#x2F;wjl8636&#x2F;Chat</a>），凡是代码里真实存在的地方，我都会给出文件路径和关键实现，希望能帮你把「IM 系统」从概念落到工程。</p>
+</blockquote>
+<hr>
+<h2 id="0-本文你会收获什么"><a href="#0-本文你会收获什么" class="headerlink" title="0. 本文你会收获什么"></a>0. 本文你会收获什么</h2><p>这篇文章不是功能清单，而是围绕一个真实项目梳理 <strong>IM 后端工程的核心知识图谱</strong>。我尽量把抽象的概念（长连接、消息总线、背压、Cache-Aside、消息模式抽象、短信验证码、软删除级联……）都对应到一段真实代码，让你看完能直接用。</p>
+<p>涵盖的主题索引：</p>
+<ul>
+<li>分层架构与「<strong>薄控制器 + 重 Service</strong>」的组织方式</li>
+<li>统一的 <strong>响应协议与错误码</strong> 约定</li>
+<li><strong>配置驱动 + 单例启动</strong> 的运行模型</li>
+<li>WebSocket 的 <strong>双 Channel 读写模型</strong> 与<strong>背压保护</strong></li>
+<li>用<strong>原生 Go Channel</strong> 手写进程内消息总线的 Channel 模式</li>
+<li><strong>Kafka 消息队列</strong> 模式的消费端与扩展思路</li>
+<li>消息的 <strong>持久化 + Redis 缓存 + 在线&#x2F;离线投递</strong> 闭环</li>
+<li><strong>UUID 前缀语义化</strong>驱动的路由分发</li>
+<li><strong>Redis 验证码一次性消费</strong> 的短信登录</li>
+<li>社交关系与群聊管理背后的<strong>状态机</strong>设计</li>
+<li>工程韧性：路径归一化、统一日志、安全注意事项</li>
+</ul>
+<hr>
+<h2 id="1-先看一眼：这个系统由什么组成"><a href="#1-先看一眼：这个系统由什么组成" class="headerlink" title="1. 先看一眼：这个系统由什么组成"></a>1. 先看一眼：这个系统由什么组成</h2><p>「KamaChat」是一套<strong>前后端分离</strong>的仿微信即时通讯系统，代码总量约 1.5 万行。后端用 Go，前端用 Vue 3。它不是只有一个「发消息」功能，而是覆盖 IM 的完整业务面：</p>
+<table>
+<thead>
+<tr>
+<th>能力线</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>登录&#x2F;注册</strong></td>
+<td>账号密码登录 + 阿里云短信验证码登录 &#x2F; 注册</td>
+</tr>
+<tr>
+<td><strong>单聊 &amp; 群聊</strong></td>
+<td>消息统一发到后端聊天服务器，由服务器<strong>精确转发</strong>给接收方</td>
+</tr>
+<tr>
+<td><strong>离线消息</strong></td>
+<td>离线时消息落库，登录时从库&#x2F;缓存回补历史记录</td>
+</tr>
+<tr>
+<td><strong>多种消息</strong></td>
+<td>文本、文件、音视频通话信令（<code>AudioOrVideo</code>）</td>
+</tr>
+<tr>
+<td><strong>联系人体系</strong></td>
+<td>添加、删除、拉黑、申请&#x2F;同意&#x2F;拒绝</td>
+</tr>
+<tr>
+<td><strong>群聊管理</strong></td>
+<td>建群、退群、解散、踢人、进群方式（直接&#x2F;审核）</td>
+</tr>
+<tr>
+<td><strong>后台管理</strong></td>
+<td>管理员的禁用&#x2F;启用&#x2F;删除用户、设置管理员、管控群聊</td>
+</tr>
+</tbody></table>
+<p>其中<strong>后端三位一体的消息链路</strong>——<code>WebSocket 长连接 → 进程内总线/Kafka → MySQL 持久化 + Redis 缓存</code>——最为精华，是本文主线。</p>
+<hr>
+<h2 id="2-核心一：分层架构-——-「薄控制器-重-Service」"><a href="#2-核心一：分层架构-——-「薄控制器-重-Service」" class="headerlink" title="2. 核心一：分层架构 —— 「薄控制器 + 重 Service」"></a>2. 核心一：分层架构 —— 「薄控制器 + 重 Service」</h2><p>后端采用很典型的 Go 分层，目录即职责（项目根 <code>api/</code>、<code>internal/</code>、<code>pkg/</code> 三大块）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">api/v1/                     # 控制器层：只做绑定与响应的「薄层」</span><br><span class="line">internal/https_server/      # Gin 引擎初始化 + 全部路由注册</span><br><span class="line">internal/service/gorm/      # 业务 Service 层（核心逻辑都在这里）</span><br><span class="line">internal/service/chat/      # WebSocket 聊天核心（Channel/Kafka 双模式）</span><br><span class="line">internal/service/redis/     # Redis 封装</span><br><span class="line">internal/service/kafka/     # Kafka 封装</span><br><span class="line">internal/service/sms/       # 阿里云短信</span><br><span class="line">internal/dao/               # 全局 GORM 实例 + 自动迁移</span><br><span class="line">internal/model/             # GORM 数据模型</span><br><span class="line">internal/dto/               # 请求/响应结构体</span><br><span class="line">pkg/                        # 常量、枚举、SSL、日志、工具</span><br></pre></td></tr></table></figure>
+
+<p>控制器层的「薄」，体现在它几乎不写业务。以 <code>api/v1/message_controller.go</code> 为例，一个接口就是「绑参数 → 调 Service → 统一返回」三步：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GetMessageList</span><span class="params">(c *gin.Context)</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> req request.GetMessageListRequest</span><br><span class="line">	<span class="keyword">if</span> err := c.BindJSON(&amp;req); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		c.JSON(http.StatusOK, gin.H&#123;<span class="string">&quot;code&quot;</span>: <span class="number">500</span>, <span class="string">&quot;message&quot;</span>: constants.SYSTEM_ERROR&#125;)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	message, rsp, ret := gorm.MessageService.GetMessageList(req.UserOneId, req.UserTwoId)</span><br><span class="line">	JsonBack(c, message, ret, rsp)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：统一响应协议 &#x2F; 错误码约定</strong><br>所有 controller 都走同一个 <code>JsonBack(c, message, ret, data)</code>（<code>api/v1/controller.go</code>）。关键在 <code>ret</code> 的三位语义：<code>0</code> &#x3D; 成功（code 200）、<code>-2</code> &#x3D; <strong>业务失败</strong>（如”用户不存在”，code 400，面向用户提示）、<code>-1</code> &#x3D; <strong>系统错误</strong>（如 DB 挂了，code 500，只记日志不返回给用户）。把「业务问题」和「系统问题」用返回码严格区分，前端拿到 message 既能直接展示给用户，后端也能据此区分该不该抛告警。这在 <code>docs/业务逻辑.md</code> 里有明确约定。</p>
+</blockquote>
+<hr>
+<h2 id="3-核心二：配置驱动-单例启动-——-一套代码两种消息模式"><a href="#3-核心二：配置驱动-单例启动-——-一套代码两种消息模式" class="headerlink" title="3. 核心二：配置驱动 + 单例启动 —— 一套代码两种消息模式"></a>3. 核心二：配置驱动 + 单例启动 —— 一套代码两种消息模式</h2><h3 id="3-1-配置加载（internal-config-config-go）"><a href="#3-1-配置加载（internal-config-config-go）" class="headerlink" title="3.1 配置加载（internal/config/config.go）"></a>3.1 配置加载（<code>internal/config/config.go</code>）</h3><p>用 <code>BurntSushi/toml</code> 解析，按表名映射到结构体，<code>GetConfig()</code> 用<strong>单例 + 各包 <code>init()</code></strong> 的方式保证全局唯一：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> config *Config</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GetConfig</span><span class="params">()</span></span> *Config &#123;</span><br><span class="line">	<span class="keyword">if</span> config == <span class="literal">nil</span> &#123;</span><br><span class="line">		config = <span class="built_in">new</span>(Config)</span><br><span class="line">		_ = LoadConfig()</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> config</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>配置段拆分得很清晰：<code>mainConfig</code>、<code>mysqlConfig</code>、<code>redisConfig</code>、<code>authCodeConfig</code>（阿里云短信 AK&#x2F;SK）、<code>logConfig</code>、<code>kafkaConfig</code>、<code>staticSrcConfig</code>。</p>
+<p>其中 <code>kafkaConfig</code> 有一段最关键的开关（<code>config.toml</code>）：</p>
+<figure class="highlight toml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[kafkaConfig]</span></span><br><span class="line"><span class="attr">messageMode</span> = <span class="string">&quot;channel&quot;</span>            <span class="comment"># 消息模式 channel 或 kafka</span></span><br><span class="line"><span class="attr">hostPort</span> = <span class="string">&quot;127.0.0.1:9092&quot;</span>        <span class="comment"># 多个 kafka 用逗号分隔</span></span><br><span class="line"><span class="attr">loginTopic</span> = <span class="string">&quot;login&quot;</span></span><br><span class="line"><span class="attr">chatTopic</span> = <span class="string">&quot;chat_message&quot;</span></span><br><span class="line"><span class="attr">logoutTopic</span> = <span class="string">&quot;logout&quot;</span></span><br><span class="line"><span class="attr">partition</span> = <span class="number">0</span></span><br><span class="line"><span class="attr">timeout</span> = <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-启动流程（cmd-kama-chat-server-main-go）"><a href="#3-2-启动流程（cmd-kama-chat-server-main-go）" class="headerlink" title="3.2 启动流程（cmd/kama_chat_server/main.go）"></a>3.2 启动流程（<code>cmd/kama_chat_server/main.go</code>）</h3><p>启动顺序干净利落，且<strong>消息模式在启动时二选一</strong>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">conf := config.GetConfig()</span><br><span class="line"><span class="keyword">if</span> conf.KafkaConfig.MessageMode == <span class="string">&quot;kafka&quot;</span> &#123;</span><br><span class="line">	kafka.KafkaService.KafkaInit()          <span class="comment">// ① 先初始化 Kafka Writer/Reader</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> conf.KafkaConfig.MessageMode == <span class="string">&quot;channel&quot;</span> &#123;</span><br><span class="line">	<span class="keyword">go</span> chat.ChatServer.Start()              <span class="comment">// ② channel 模式：进程内总线</span></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	<span class="keyword">go</span> chat.KafkaChatServer.Start()         <span class="comment">//     kafka 模式：消息队列</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> err := https_server.GE.RunTLS(...); err != <span class="literal">nil</span> &#123; <span class="comment">/* ... */</span> &#125;   <span class="comment">// ③ HTTPS</span></span><br></pre></td></tr></table></figure>
+
+<p>启动时通过 <code>signal.Notify</code> 监听 <code>SIGINT/SIGTERM</code> 实现<strong>优雅退出</strong>：关闭 Kafka、关聊天服务、最后 <code>myredis.DeleteAllRedisKeys()</code> 清理缓存。</p>
+<blockquote>
+<p><strong>知识点：模式抽象 &#x2F; 配置驱动</strong><br>同一套业务代码，靠一个 <code>messageMode</code> 字段切换消息分发后端，而不需要在流程里写两套。这种做法把「技术选型」从代码里抽出到配置层，不仅降低了耦合，也让「单机学习版 → 分布式生产版」的演进变成了<strong>改一行配置</strong>——这是 IM 系统很值得借鉴的抽象思路。</p>
+</blockquote>
+<hr>
+<h2 id="4-核心三：WebSocket-双-Channel-读写模型与背压保护"><a href="#4-核心三：WebSocket-双-Channel-读写模型与背压保护" class="headerlink" title="4. 核心三：WebSocket 双 Channel 读写模型与背压保护"></a>4. 核心三：WebSocket 双 Channel 读写模型与背压保护</h2><p>WebSocket 是本系统的「神经末梢」。每个连接对应一个 <code>Client</code>（<code>internal/service/chat/client.go</code>）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Client <span class="keyword">struct</span> &#123;</span><br><span class="line">	Conn     *websocket.Conn</span><br><span class="line">	Uuid     <span class="type">string</span></span><br><span class="line">	SendTo   <span class="keyword">chan</span> []<span class="type">byte</span>        <span class="comment">// 给 server 端（上行）</span></span><br><span class="line">	SendBack <span class="keyword">chan</span> *MessageBack  <span class="comment">// 给前端（下行）</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> MessageBack <span class="keyword">struct</span> &#123;</span><br><span class="line">	Message []<span class="type">byte</span>   <span class="comment">// 序列化后的消息</span></span><br><span class="line">	Uuid    <span class="type">string</span>   <span class="comment">// 消息 uuid，写成功后回写状态用</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>每个连接开<strong>两个 goroutine</strong>：<code>Read()</code> 读上行、<code>Write()</code> 写下行，通过带缓冲的 channel 解耦，避免直接读写阻塞对方。</p>
+<p><strong><code>Read()</code>（上行分流）</strong> —— 读完消息后按消息模式走不同路径：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> messageMode == <span class="string">&quot;channel&quot;</span> &#123;</span><br><span class="line">	<span class="comment">// 背压：若转发总线没满，先把积压的 SendTo 冲刷上去</span></span><br><span class="line">	<span class="keyword">for</span> <span class="built_in">len</span>(ChatServer.Transmit) &lt; constants.CHANNEL_SIZE &amp;&amp; <span class="built_in">len</span>(c.SendTo) &gt; <span class="number">0</span> &#123;</span><br><span class="line">		sendToMessage := &lt;-c.SendTo</span><br><span class="line">		ChatServer.SendMessageToTransmit(sendToMessage)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(ChatServer.Transmit) &lt; constants.CHANNEL_SIZE &#123;</span><br><span class="line">		ChatServer.SendMessageToTransmit(jsonMessage)   <span class="comment">// 总线有空位 → 直接上总线</span></span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> <span class="built_in">len</span>(c.SendTo) &lt; constants.CHANNEL_SIZE &#123;</span><br><span class="line">		c.SendTo &lt;- jsonMessage                          <span class="comment">// 总线满了 → 进本地缓冲队列</span></span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="comment">// 缓冲区也满了 → 主动降级：告诉客户端稍后重试</span></span><br><span class="line">		c.Conn.WriteMessage(websocket.TextMessage, []<span class="type">byte</span>(<span class="string">&quot;消息发送失败，请稍后重试&quot;</span>))</span><br><span class="line">	&#125;</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	<span class="comment">// kafka 模式：生产者 → 写入 ChatTopic</span></span><br><span class="line">	kafka.KafkaService.ChatWriter.WriteMessages(ctx, kafka.Message&#123;Key: ..., Value: jsonMessage&#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong><code>Write()</code>（下行 + 状态机推进）</strong> —— 把消息写回前端，并在成功后把消息 <code>status</code> 从 <code>Unsent</code> 更新为 <code>Sent</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> messageBack := <span class="keyword">range</span> c.SendBack &#123;</span><br><span class="line">	err := c.Conn.WriteMessage(websocket.TextMessage, messageBack.Message)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123; <span class="keyword">return</span> &#125;   <span class="comment">// 失败直接断开连接</span></span><br><span class="line">	<span class="comment">// 在线消息的「已发送」状态在这里推进</span></span><br><span class="line">	dao.GormDB.Model(&amp;model.Message&#123;&#125;).Where(<span class="string">&quot;uuid = ?&quot;</span>, messageBack.Uuid).Update(<span class="string">&quot;status&quot;</span>, message_status_enum.Sent)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：背压（Backpressure）与阻塞语义</strong><br>Go Channel 的 <code>len()</code> &#x2F; 容量在这里被当成<strong>水位计</strong>用：总线满 → 进本地缓冲，缓冲满 → 主动拒绝而非阻塞死等。因为 WebSocket 是长连接，一旦某条链路堵死，很容易拖垮整个连接甚至服务器。这里用「<strong>分级缓冲 + 主动降级</strong>」而不是简单阻塞，是 IM 并发下保证单连接可用的关键。</p>
+<p>另外注意 <code>CheckOrigin</code> 直接返回 <code>true</code>、配合全局 CORS 放开，这里是为了便于前端从任意源连接——<strong>生产环境应换成白名单校验</strong>，属于可点评的安全改进点。</p>
+</blockquote>
+<hr>
+<h2 id="5-核心四：进程内消息总线-——-用原生-Channel-写-IM-服务器"><a href="#5-核心四：进程内消息总线-——-用原生-Channel-写-IM-服务器" class="headerlink" title="5. 核心四：进程内消息总线 —— 用原生 Channel 写 IM 服务器"></a>5. 核心四：进程内消息总线 —— 用原生 Channel 写 IM 服务器</h2><p>这是本项目<strong>单机模式最有辨识度</strong>的设计：<code>Server</code>（<code>internal/service/chat/server.go</code>）没有引入任何消息中间件，而是<strong>用原生 Go Channel 手写了一个内存消息总线</strong>。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Server <span class="keyword">struct</span> &#123;</span><br><span class="line">	Clients  <span class="keyword">map</span>[<span class="type">string</span>]*Client   <span class="comment">// 在线客户端表（uuid → conn）</span></span><br><span class="line">	mutex    *sync.Mutex          <span class="comment">// 保护 Clients</span></span><br><span class="line">	Transmit <span class="keyword">chan</span> []<span class="type">byte</span>          <span class="comment">// 消息转发总线</span></span><br><span class="line">	Login    <span class="keyword">chan</span> *Client         <span class="comment">// 登录通道</span></span><br><span class="line">	Logout   <span class="keyword">chan</span> *Client         <span class="comment">// 退出登录通道</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>Start()</code> 是一个<strong>单 <code>for-select</code> 主循环</strong>，一次性消费登录、登出、消息三个通道：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> &#123;</span><br><span class="line">	<span class="keyword">select</span> &#123;</span><br><span class="line">	<span class="keyword">case</span> client := &lt;-s.Login:          <span class="comment">// 登录：登记 + 欢迎语</span></span><br><span class="line">		s.Clients[client.Uuid] = client</span><br><span class="line">	<span class="keyword">case</span> client := &lt;-s.Logout:         <span class="comment">// 登出：移除 + 提示</span></span><br><span class="line">		<span class="built_in">delete</span>(s.Clients, client.Uuid)</span><br><span class="line">	<span class="keyword">case</span> data := &lt;-s.Transmit:         <span class="comment">// 消息：真正的核心处理</span></span><br><span class="line">		<span class="comment">// 反序列化 → 持久化 → 在线投递 → Redis 回写</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>它只有一个架构师级的优雅之处</strong>：<code>Transmit</code> 通道让「任意连接产生的消息」都汇聚到唯一的事件循环里处理，<strong>天然避免了并发写 map 的数据竞争</strong>（所有对 <code>Clients</code> 的操作都在主循环完成，加锁粒度很小）。</p>
+<blockquote>
+<p><strong>知识点：事件循环 + 单消费者</strong><br>把并发模型收敛成「多个生产者（各连接） → 单消费者（主循环）」，好处是<strong>所有共享状态（在线表）都在一个 goroutine 里被访问</strong>，正确性大幅提升，也不需要处理复杂的锁嵌套。这是「Actor &#x2F; 事件总线」思路在单机 Go 里的经典落地。</p>
+</blockquote>
+<h3 id="5-1-在线投递的逻辑"><a href="#5-1-在线投递的逻辑" class="headerlink" title="5.1 在线投递的逻辑"></a>5.1 在线投递的逻辑</h3><p>处理消息时分单聊 &#x2F; 群聊两条路径，判定标准是<strong>接收方 ID 前缀</strong>（详见第 8 节）：</p>
+<ul>
+<li><strong>单聊</strong>（<code>ReceiveId[0] == &#39;U&#39;</code>）：在线则 <code>receiveClient.SendBack &lt;- messageBack</code>，同时<strong>后端替发送者做回显</strong>（因为前端 store 只能存 rsp 不能存 req，注释明确写了「后端回显，前端不回显」）。</li>
+<li><strong>群聊</strong>（<code>ReceiveId[0] == &#39;G&#39;</code>）：把 <code>group.Members</code>（JSON 数组）反序列化成 <code>[]string</code>，遍历投递给每个在线成员。</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> members []<span class="type">string</span></span><br><span class="line">json.Unmarshal(group.Members, &amp;members)   <span class="comment">// Members 是 json.RawMessage 存 JSON 数组</span></span><br><span class="line"><span class="keyword">for</span> _, member := <span class="keyword">range</span> members &#123;</span><br><span class="line">	<span class="keyword">if</span> member != message.SendId &#123;</span><br><span class="line">		<span class="keyword">if</span> rc, ok := s.Clients[member]; ok &#123; rc.SendBack &lt;- messageBack &#125;  <span class="comment">// 其他人</span></span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		s.Clients[message.SendId].SendBack &lt;- messageBack                    <span class="comment">// 发送者回显</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：为什么 Redis 只写不读（此处）</strong><br>在线消息走的是 WebSocket 实时推送；Redis 里的 <code>message_list_*</code> 只负责<strong>缓存历史</strong>，让「切换会话 &#x2F; 二次拉取」从内存命中而非每次打 DB（详见第 6 节）。IM 系统要理解清楚<strong>哪条链路是实时、哪条是持久&#x2F;缓存</strong>，才不会出现冗余双写。</p>
+</blockquote>
+<hr>
+<h2 id="6-核心五：Kafka-模式-——-从单机到分布式的一小步"><a href="#6-核心五：Kafka-模式-——-从单机到分布式的一小步" class="headerlink" title="6. 核心五：Kafka 模式 —— 从单机到分布式的一小步"></a>6. 核心五：Kafka 模式 —— 从单机到分布式的一小步</h2><p>Channel 模式单机很爽，但<strong>一个实例里所有连接共享一条内存总线，横向扩展就受限</strong>了。Kafka 模式（<code>internal/service/chat/kafka_server.go</code> + <code>internal/service/kafka/kafka_service.go</code>）用消息队列把「生产」和「消费」解耦。</p>
+<h3 id="6-1-生产端：每个连接都是生产者"><a href="#6-1-生产端：每个连接都是生产者" class="headerlink" title="6.1 生产端：每个连接都是生产者"></a>6.1 生产端：每个连接都是生产者</h3><p>在 <code>Read()</code> 里，<code>WriteMessages</code> 把消息写进 <code>chatTopic</code>。Writer 配置值得注意（<code>kafka_service.go</code>）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">k.ChatWriter = &amp;kafka.Writer&#123;</span><br><span class="line">	Addr:  kafka.TCP(kafkaConfig.HostPort),</span><br><span class="line">	Topic: kafkaConfig.ChatTopic,</span><br><span class="line">	Balancer: &amp;kafka.Hash&#123;&#125;,          <span class="comment">// 根据 key 哈希分区，保证同 key 有序</span></span><br><span class="line">	RequiredAcks: kafka.RequireNone,  <span class="comment">// 不强制等待 ack，高吞吐</span></span><br><span class="line">	AllowAutoTopicCreation: <span class="literal">false</span>,    <span class="comment">// 不让自动建 topic，防止误建</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-消费端：单-goroutine-消费-recover-兜底"><a href="#6-2-消费端：单-goroutine-消费-recover-兜底" class="headerlink" title="6.2 消费端：单 goroutine 消费 + recover 兜底"></a>6.2 消费端：单 goroutine 消费 + recover 兜底</h3><p><code>KafkaServer.Start()</code> 里，用一个 goroutine 持续拉取 <code>KafkaReader.ReadMessage</code>，对每条消息走<strong>与 Channel 模式完全相同的</strong>持久化 + 投递 + Redis 逻辑（代码高度复用）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> &#123;</span><br><span class="line">	kafkaMessage, err := kafka.KafkaService.ChatReader.ReadMessage(ctx)</span><br><span class="line">	<span class="comment">// topic/partition/offset/key/value 都打日志，方便回溯</span></span><br><span class="line">	<span class="keyword">var</span> chatMessageReq request.ChatMessageRequest</span><br><span class="line">	json.Unmarshal(kafkaMessage.Value, &amp;chatMessageReq)</span><br><span class="line">	<span class="comment">// ... 与单机模式同样的：存库 → 在线投递 → Redis 回写</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>两个生产级细节：</p>
+<ul>
+<li>每个 goroutine 用 <code>defer + recover()</code> 捕获 panic，<strong>避免单条异常消息把整个消费协程打死</strong>（代码里明确写了 <code>kafka server panic</code> 的日志）。</li>
+<li>Reader 配置了 <code>GroupID: &quot;chat&quot;</code>、<code>StartOffset: kafka.LastOffset</code>，意味着<strong>多个实例可以同属于一个消费组</strong>——这正是后续做多实例横向扩展的基础。</li>
+</ul>
+<blockquote>
+<p><strong>知识点：Channel vs Kafka，IM 架构怎么选</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Channel 模式</th>
+<th>Kafka 模式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>依赖</td>
+<td>无外部中间件</td>
+<td>需要 Kafka 集群</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>内存级，极低</td>
+<td>引入网络&#x2F;队列延迟</td>
+</tr>
+<tr>
+<td>横向扩展</td>
+<td>受限（单机内存总线）</td>
+<td>消费组支持多实例</td>
+</tr>
+<tr>
+<td>适用</td>
+<td>学习 &#x2F; 单机小规模</td>
+<td>分布式 &#x2F; 高吞吐生产</td>
+</tr>
+</tbody></table>
+<p>而本项目两者<strong>共用一套业务处理逻辑</strong>，靠 <code>messageMode</code> 切换——这就是第 3 节「配置驱动」带来的红利。</p>
+</blockquote>
+<hr>
+<h2 id="7-核心六：消息的持久化与投递闭环（MySQL-Redis-双写）"><a href="#7-核心六：消息的持久化与投递闭环（MySQL-Redis-双写）" class="headerlink" title="7. 核心六：消息的持久化与投递闭环（MySQL + Redis 双写）"></a>7. 核心六：消息的持久化与投递闭环（MySQL + Redis 双写）</h2><p>IM 最怕丢消息。本项目用「<strong>在线投递 + 落库 + Redis 缓存 + 离线回补</strong>」把消息生命周期串起来。以文本消息为例（<code>server.go</code>）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ① 构造消息并落库（status 初始为 Unsent）</span></span><br><span class="line">message := model.Message&#123;</span><br><span class="line">	Uuid: <span class="string">&quot;M&quot;</span> + random.GetNowAndLenRandomString(<span class="number">11</span>),</span><br><span class="line">	SessionId: ..., Type: ..., Content: ..., SendId: ..., ReceiveId: ...,</span><br><span class="line">	Status: message_status_enum.Unsent,</span><br><span class="line">&#125;</span><br><span class="line">dao.GormDB.Create(&amp;message)</span><br><span class="line"></span><br><span class="line"><span class="comment">// ② 在线投递（见第 5 节）：成功后再把 status 置为 Sent</span></span><br><span class="line"><span class="comment">// ③ Redis 追加缓存，供二次拉取</span></span><br><span class="line">rspString, _ := myredis.GetKeyNilIsErr(<span class="string">&quot;message_list_&quot;</span> + message.SendId + <span class="string">&quot;_&quot;</span> + message.ReceiveId)</span><br><span class="line"><span class="keyword">var</span> rsp []respond.GetMessageListRespond</span><br><span class="line">json.Unmarshal([]<span class="type">byte</span>(rspString), &amp;rsp)</span><br><span class="line">rsp = <span class="built_in">append</span>(rsp, messageRsp)</span><br><span class="line">rspByte, _ := json.Marshal(rsp)</span><br><span class="line">myredis.SetKeyEx(<span class="string">&quot;message_list_&quot;</span>+message.SendId+<span class="string">&quot;_&quot;</span>+message.ReceiveId, <span class="type">string</span>(rspByte), time.Minute*constants.REDIS_TIMEOUT)</span><br></pre></td></tr></table></figure>
+
+<p><strong>离线消息</strong>靠「先落库」保证不丢：接收方不在线时消息落库，对方登录后调用 <code>GetMessageList</code>（<code>internal/service/gorm/message_service.go</code>）按需回补。而 <code>GetMessageList</code> 遵循 <strong>Cache-Aside</strong>：先查 Redis，miss 则查库，用 <code>errors.Is(err, redis.Nil)</code> 判断「键不存在」走 DB：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">rspString, err := myredis.GetKeyNilIsErr(<span class="string">&quot;message_list_&quot;</span> + userOneId + <span class="string">&quot;_&quot;</span> + userTwoId)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> errors.Is(err, redis.Nil) &#123;        <span class="comment">// Redis 没有缓存 → 查库</span></span><br><span class="line">		dao.GormDB.Where(<span class="string">&quot;(send_id = ? AND receive_id = ?) OR (send_id = ? AND receive_id = ?)&quot;</span>,</span><br><span class="line">			userOneId, userTwoId, userTwoId, userOneId).</span><br><span class="line">			Order(<span class="string">&quot;created_at ASC&quot;</span>).Find(&amp;messageList)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：Cache-Aside 与消息一致性</strong><br>本项目的思路是：<strong>实时靠 WebSocket，历史靠 Redis 缓存，兜底靠 MySQL</strong>。一条消息被写入后同步更新 Redis 缓存，保证「切会话、翻历史」走内存。值得留意的是，代码里有相当多 <code>SetKeyEx</code>（写缓存）被注释掉，说明它是「缓存已实现、按需开启」的半成品——这恰恰是博客里可点评的优化空间（见第 12 节）。</p>
+</blockquote>
+<hr>
+<h2 id="8-核心七：UUID-前缀语义化驱动的路由分发"><a href="#8-核心七：UUID-前缀语义化驱动的路由分发" class="headerlink" title="8. 核心七：UUID 前缀语义化驱动的路由分发"></a>8. 核心七：UUID 前缀语义化驱动的路由分发</h2><p>这是本项目<strong>贯穿全系统、最简洁有效的标识设计</strong>：一切实体都用带前缀的 UUID 标识。</p>
+<table>
+<thead>
+<tr>
+<th>前缀</th>
+<th>含义</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>U</code></td>
+<td>用户</td>
+<td><code>Uxxxxxxxxxx</code></td>
+</tr>
+<tr>
+<td><code>G</code></td>
+<td>群组</td>
+<td><code>Gxxxxxxxxxx</code></td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>会话</td>
+<td><code>Sxxxxxxxxxx</code></td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>消息</td>
+<td><code>Mxxxxxxxxxx</code></td>
+</tr>
+</tbody></table>
+<p>它的红利在消息路由里<strong>零成本地发挥了作用</strong>——不需要查 DB，只看 <code>ReceiveId[0]</code> 就能决定走单聊还是群聊：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> message.ReceiveId[<span class="number">0</span>] == <span class="string">&#x27;U&#x27;</span> &#123;   <span class="comment">// 单聊</span></span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> message.ReceiveId[<span class="number">0</span>] == <span class="string">&#x27;G&#x27;</span> &#123;  <span class="comment">// 群聊</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：语义化主键 &#x2F; 前缀分型</strong><br>用「前缀 + 长度固定」的字符串做主键，好处是：<strong>任何地方拿到 ID 就知道对象类型</strong>，还能天然分区（不同前缀可路由到不同存储）。对 IM 这种频繁查询实体类型的场景，比独立的 type 字段更省一次判断、更省一次查询。这是从「能跑」走向「简洁优雅」的一个小设计观。</p>
+</blockquote>
+<hr>
+<h2 id="9-核心八：认证-——-Redis-验证码的一次性消费"><a href="#9-核心八：认证-——-Redis-验证码的一次性消费" class="headerlink" title="9. 核心八：认证 —— Redis 验证码的一次性消费"></a>9. 核心八：认证 —— Redis 验证码的一次性消费</h2><p>登录&#x2F;注册的验证码闭环是一个完整的「<strong>Redis 防重发 + 一次性消费</strong>」范例（<code>internal/service/sms/auth_code_service.go</code> + <code>internal/service/gorm/user_info_service.go</code>）。</p>
+<h3 id="9-1-发送验证码（sms-VerificationCode）"><a href="#9-1-发送验证码（sms-VerificationCode）" class="headerlink" title="9.1 发送验证码（sms.VerificationCode）"></a>9.1 发送验证码（<code>sms.VerificationCode</code>）</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">key := <span class="string">&quot;auth_code_&quot;</span> + telephone</span><br><span class="line">code, _ := redis.GetKey(key)</span><br><span class="line"><span class="keyword">if</span> code != <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="string">&quot;目前还不能发送验证码，请输入已发送的验证码&quot;</span>, <span class="number">-2</span>   <span class="comment">// 已有有效码 → 防重发</span></span><br><span class="line">&#125;</span><br><span class="line">code = strconv.Itoa(random.GetRandomInt(<span class="number">6</span>))              <span class="comment">// 6 位随机码</span></span><br><span class="line">redis.SetKeyEx(key, code, time.Minute)                    <span class="comment">// 1 分钟过期</span></span><br><span class="line"><span class="comment">// 封装短信模板并调用阿里云 SendSmsWithOptions</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="9-2-消费验证码（Register-SmsLogin）"><a href="#9-2-消费验证码（Register-SmsLogin）" class="headerlink" title="9.2 消费验证码（Register &#x2F; SmsLogin）"></a>9.2 消费验证码（<code>Register</code> &#x2F; <code>SmsLogin</code>）</h3><p>登录&#x2F;注册时<strong>校验收证码后立即删除</strong>，确保一次性：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">code, _ := myredis.GetKey(<span class="string">&quot;auth_code_&quot;</span> + req.Telephone)</span><br><span class="line"><span class="keyword">if</span> code != req.SmsCode &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="string">&quot;验证码不正确，请重试&quot;</span>, <span class="number">-2</span></span><br><span class="line">&#125;</span><br><span class="line">myredis.DelKeyIfExists(key)   <span class="comment">// 一次性：用完即删</span></span><br></pre></td></tr></table></figure>
+
+<p>短信 SDK 用<strong>惰性单例</strong>建客户端（<code>createClient</code>），AK&#x2F;SK 从配置读取，Endpoint <code>dysmsapi.aliyuncs.com</code>。</p>
+<blockquote>
+<p><strong>知识点：验证码的两把钥匙</strong><br>① <strong>防靡发</strong>：已有未过期验证码就直接拒绝重发（用 Redis TTL 做节流）；② <strong>一次性</strong>：消费后立刻删 key，防止重复使用。另外代码注释里那句「手机号验证，最后一步才调用 api，<strong>省钱</strong>」，是工程上很真实、很接地气的成本取舍——不是所有流程都要优先考虑 API 消耗，但故意把昂贵调用后置、或复用已验证状态，都值得借鉴。</p>
+</blockquote>
+<hr>
+<h2 id="10-核心九：社交关系与群聊管理-——-状态机设计"><a href="#10-核心九：社交关系与群聊管理-——-状态机设计" class="headerlink" title="10. 核心九：社交关系与群聊管理 —— 状态机设计"></a>10. 核心九：社交关系与群聊管理 —— 状态机设计</h2><p>IM 的「联系人和群」不是简单的外键表，而是一张<strong>带丰富状态位的关系状态机</strong>。核心在 <code>internal/service/gorm/user_contact_service.go</code> &#x2F; <code>group_info_service.go</code>，关键枚举在 <code>pkg/enum/contact/contact_status_enum</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 联系人状态（简化示意）</span></span><br><span class="line">NORMAL          <span class="comment">// 正常</span></span><br><span class="line">BE_BLACK        <span class="comment">// 被拉黑</span></span><br><span class="line">BLACK           <span class="comment">// 我拉黑了对方</span></span><br><span class="line">BE_DELETE       <span class="comment">// 已被删除</span></span><br><span class="line">DELETE          <span class="comment">// 我删除了对方</span></span><br><span class="line">SILENCE         <span class="comment">// 被禁言</span></span><br><span class="line">QUIT_GROUP      <span class="comment">// 已退群</span></span><br><span class="line">KICK_OUT_GROUP  <span class="comment">// 被踢出群</span></span><br></pre></td></tr></table></figure>
+
+<p>这些状态位直接驱动诸如 <code>CheckOpenSessionAllowed</code>（能否打开会话）等判断，而群聊又有自己的「加群方式」枚举（<code>DIRECT</code> 直接进群 &#x2F; <code>AUDIT</code> 需审核）。</p>
+<blockquote>
+<p><strong>知识点：关系即状态机</strong><br>「谁拉黑了谁」「谁被禁言」「谁退群了」这些关系，很适合做成<strong>一张关系表 + 状态位</strong>而不是一堆布尔字段。好处是：新增一种关系状态只需加一个枚举分支，且能统一承载权限判断逻辑（被拉黑&#x2F;被禁言&#x2F;被踢出 → 不能打开会话）。把「权限」建模成「状态」，是社交类系统一个成熟的做法。</p>
+</blockquote>
+<hr>
+<h2 id="11-后台管理：管理员的能力边界"><a href="#11-后台管理：管理员的能力边界" class="headerlink" title="11. 后台管理：管理员的能力边界"></a>11. 后台管理：管理员的能力边界</h2><p>后台管理能力集中在 <code>user_info_service.go</code> 的几个方法，最值得讲的是 <strong>级联软删除</strong>。</p>
+<p>以 <code>DeleteUsers</code> &#x2F; <code>DisableUsers</code> 为例，删&#x2F;禁一个用户不只是改一个 <code>status</code>，而是<strong>级联把该用户关联的会话软删除</strong>（<code>gorm.DeletedAt</code> 置为有效），保证被删用户的会话列表不再可见：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">uid := user.Uuid</span><br><span class="line">GormDB.Where(<span class="string">&quot;send_id = ? or receive_id = ?&quot;</span>, uid, uid).Find(&amp;sessionList)</span><br><span class="line"><span class="keyword">for</span> _, session := <span class="keyword">range</span> sessionList &#123;</span><br><span class="line">	session.DeletedAt.Valid, session.DeletedAt.Time = <span class="literal">true</span>, time.Now()</span><br><span class="line">	GormDB.Save(&amp;session)</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 再级联删联系人关系、删申请记录…</span></span><br></pre></td></tr></table></figure>
+
+<p>而管理员看全量用户（含已软删除的）时用 <code>Unscoped()</code> 绕过软删除过滤：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GormDB.Unscoped().Where(<span class="string">&quot;uuid != ?&quot;</span>, ownerId).Find(&amp;users)   <span class="comment">// 连软删数据一起给管理员看</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>知识点：软删除的价值与代价</strong><br>用 <code>gorm.DeletedAt</code> 做软删除，是为了<strong>保留审计痕迹、支持恢复</strong>，代价是几乎所有查询都要记得排除软删数据（GORM 默认自动过滤）。这里又叠加了「业务级删除」——Service 层显式置 <code>DeletedAt</code> 来实现级联，思路清晰。但也要注意：<strong>禁用用户后仅软删会话、未清 Redis 缓存</strong>（相关 <code>DelKeysWithPrefix(&quot;contact_user_list&quot;)</code> 被注释），会导致缓存里仍残留旧状态，属于一个真实的工程取舍点。</p>
+</blockquote>
+<hr>
+<h2 id="12-工程韧性：那些让-IM-真正能用的「脏活」"><a href="#12-工程韧性：那些让-IM-真正能用的「脏活」" class="headerlink" title="12. 工程韧性：那些让 IM 真正能用的「脏活」"></a>12. 工程韧性：那些让 IM 真正能用的「脏活」</h2><p>聊了这么多华丽的功能，最后必须强调——<strong>真正拉开生产级与 Demo 差距的，都是不起眼的工程细节</strong>。</p>
+<h3 id="12-1-路径归一化（server-go-的-normalizePath）"><a href="#12-1-路径归一化（server-go-的-normalizePath）" class="headerlink" title="12.1 路径归一化（server.go 的 normalizePath）"></a>12.1 路径归一化（<code>server.go</code> 的 <code>normalizePath</code>）</h3><p>消息里发送者头像经常是 <code>https://ip:port/static/xxx</code>，直接入库会导致<strong>同一张图因 IP 前缀不同而不一致</strong>。一个 3 行函数把它规约为 <code>/static/xxx</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">staticIndex := strings.Index(path, <span class="string">&quot;/static/&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> staticIndex &lt; <span class="number">0</span> &#123; zlog.Error(<span class="string">&quot;路径不合法&quot;</span>) &#125;</span><br><span class="line"><span class="keyword">return</span> path[staticIndex:]   <span class="comment">// 只要从 /static/ 开始的部分</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这类「看着不起眼、漏了必踩坑」的细节，恰恰是 IM 头像&#x2F;文件路径体系容易出现脏数据的地方。</p>
+</blockquote>
+<h3 id="12-2-统一日志（pkg-zlog-zap-lumberjack）"><a href="#12-2-统一日志（pkg-zlog-zap-lumberjack）" class="headerlink" title="12.2 统一日志（pkg/zlog + zap + lumberjack）"></a>12.2 统一日志（<code>pkg/zlog</code> + zap + lumberjack）</h3><p>所有分支都有日志，区分 <code>Info</code> &#x2F; <code>Debug</code> &#x2F; <code>Error</code> &#x2F; <code>Fatal</code>，错误场景全部 <code>zlog.Error(err.Error())</code>。配合 <code>docs/业务逻辑.md</code> 的约定——<strong>业务问题记日志不抛前端，系统问题才抛</strong>——排查问题时有据可循。</p>
+<h3 id="12-3-安全注意事项（可改进项，也是很好的反思素材）"><a href="#12-3-安全注意事项（可改进项，也是很好的反思素材）" class="headerlink" title="12.3 安全注意事项（可改进项，也是很好的反思素材）"></a>12.3 安全注意事项（可改进项，也是很好的反思素材）</h3><ol>
+<li><strong>密码明文比对</strong>：<code>Login</code> 里 <code>user.Password != password</code>，未见哈希——生产必须用 <code>bcrypt</code>。</li>
+<li><strong>上传文件名未消毒</strong>：<code>UploadFile</code> 直接 <code>os.Create(staticFilePath + &quot;/&quot; + fileHeader.Filename)</code> 保存前端原始文件名，<strong>未做白名单&#x2F;随机重命名&#x2F;路径穿越校验</strong>，存在任意文件上传风险；且 <code>FILE_MAX_SIZE</code>（50000 字节 ≈ 48KB）偏小。</li>
+<li><strong><code>CheckOrigin</code> 全放行</strong>：WebSocket 握手不校验来源，生产应白名单。</li>
+<li><strong><code>DeleteAllRedisKeys</code></strong>：优雅退出用 <code>SCAN</code> 清空<strong>整个 Redis</strong>，隐含”部署即单租户”假设，生产不可复用。</li>
+<li><strong>Redis <code>Keys</code> 命令</strong>：批量删除多处用 <code>Keys</code> 模式匹配，大数据量有性能隐患（<code>DeleteAllRedisKeys</code> 已正确改用 <code>SCAN</code>，可作为正面对比）。</li>
+</ol>
+<hr>
+<h2 id="13-架构全景回顾"><a href="#13-架构全景回顾" class="headerlink" title="13. 架构全景回顾"></a>13. 架构全景回顾</h2><p>把上述各线拼起来，整个 IM 后端的架构就是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────── 前端 Vue3（登录 / 会话 / 聊天 / 管理） ────────────────────────┐</span><br><span class="line">│                         WebSocket(消息) + HTTPS(REST) 同一 443 端口                     │</span><br><span class="line">└────────────▲────────────────────────────────────────────────────────────────────────────┘</span><br><span class="line">             │ /wss(握手)                        │ POST 业务接口(约 60 个路由)</span><br><span class="line">┌────────────┴───────────────────────────────────┴──────────────────────────────────────┐</span><br><span class="line">│                         Gin（internal/https_server + api/v1 薄控制器）                  │</span><br><span class="line">│                   CORS 全放行 · HTTPS 强跳 · 静态资源 /static/avatars、/static/files    │</span><br><span class="line">└────────────┬────────────────────────────────────────────────────────────────────────────┘</span><br><span class="line">             │ messageMode 二选一</span><br><span class="line">     ┌───────┴────────┐                               ┌─────────────────────────┐</span><br><span class="line">     │ Channel 服务器   │                               │  Kafka 服务器              │</span><br><span class="line">     │ (原生Channel总线)│                               │ 生产者→ChatTopic→消费者    │</span><br><span class="line">     │  Login/Logout/  │                               │  (消费组,可多实例)          │</span><br><span class="line">     │  Transmit       │                               └────────────┬────────────┘</span><br><span class="line">     └───────┬────────┘                                            │</span><br><span class="line">             │   在线投递 + 落库 + Redis 回写（同一套处理逻辑）        │</span><br><span class="line">             └───────────────────────────┬────────────────────────┘</span><br><span class="line">                                         ▼</span><br><span class="line">                             ┌────────────────────────────┐</span><br><span class="line">                             │ MySQL(持久化:6表 AutoMigrate)│</span><br><span class="line">                             │ Redis(缓存/验证码:Cache-Aside)│</span><br><span class="line">                             └────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="14-后端工程师的几点心得"><a href="#14-后端工程师的几点心得" class="headerlink" title="14. 后端工程师的几点心得"></a>14. 后端工程师的几点心得</h2><ol>
+<li><strong>长连接是 IM 的地基，Channel 是它的骨架。</strong> 用「多生产者 → 单消费者事件循环」把并发收敛起来，共享状态就只剩一个 goroutine 在管，正确性直线上升。</li>
+<li><strong>抽象要可配置，而非硬编码。</strong> 一个 <code>messageMode</code> 就让单机版和分布式版共用一套业务逻辑。<strong>先把「技术选型」抽成配置，后续演进会非常轻松。</strong></li>
+<li><strong>消息链路要想清楚「哪条是实时、哪条是兜底」。</strong> 实时走 WebSocket、历史走 Redis、兜底走 MySQL，三者各司其职，才不会重复设计或丢消息。</li>
+<li><strong>前缀即语义。</strong> <code>U/G/S/M</code> 一个字符换来全系统类型路由的简洁，是「小设计、大价值」的典型。</li>
+<li><strong>状态 vs 权限，用状态机而不用一堆 if。</strong> 拉黑&#x2F;禁言&#x2F;退群&#x2F;踢出，越往后加越依赖清晰的状态模型。</li>
+<li><strong>生产级的差距在脏活。</strong> 密码哈希、上传消毒、来源校验、缓存一致性——这些才是把 Demo 变成产品的地方。</li>
+</ol>
+<hr>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 中间件：MySQL、Redis（可选 Kafka，channel 模式不需要）</span></span><br><span class="line"><span class="comment">#    在 MySQL 建好数据库，配置 configs/config.toml 连接信息</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 后端（Go ≥ 1.20）</span></span><br><span class="line"><span class="built_in">cd</span> cmd/kama_chat_server</span><br><span class="line">go mod tidy</span><br><span class="line">go run main.go            <span class="comment"># 默认 channel 模式，免 Kafka</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 前端（Vue 3 + Element Plus，Node/Yarn）</span></span><br><span class="line"><span class="built_in">cd</span> web/chat-server</span><br><span class="line">yarn install</span><br><span class="line">yarn serve                <span class="comment"># HTTPS 端口 443</span></span><br></pre></td></tr></table></figure>
+
+<p>访问前端，先注册一个账号（依赖阿里云短信，或改配置跳过），登录后即可体验单聊、群聊、文件、音视频通话与后台管理。</p>
+<blockquote>
+<p>⚠️ 提示：生产把 <code>config.toml</code> 的 <code>kafkaConfig.messageMode</code> 切到 <code>&quot;kafka&quot;</code> 并填好 Kafka 地址，即可体验分布式模式；同时请务必处理本篇第 12 节列出的安全改进项。</p>
+</blockquote>
+<hr>
+<p><em>本文内容均基于项目源码（<code>api/</code>、<code>internal/</code> 等目录）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Chat">https://github.com/wjl8636/Chat</a></em> ⭐</p>
+
+    </div>
+    
+    
+    
+    
+    
+    
+    
+</div>
+
+            <footer id="footer">
+    <div id="footer-wrap">
+        <div>
+            &copy;
+            2026 - 2026 Hexo
+            <span id="footer-icon">
+                <i class="fa-solid fa-font-awesome fa-fw"></i>
+            </span>
+            &commat;WJL
+        </div>
+        <div>
+            Based on the <a target="_blank" rel="noopener" href="https://hexo.io">Hexo Engine</a> &amp;
+            <a target="_blank" rel="noopener" href="https://github.com/theme-particlex/hexo-theme-particlex">ParticleX Theme</a>
+        </div>
+        
+    </div>
+</footer>
+
+        </div>
+        
+        <transition name="fade">
+            <div id="preview" ref="preview" v-show="previewShow">
+                <img id="preview-content" ref="previewContent" />
+            </div>
+        </transition>
+        
+    </div>
+    <script src="/js/main.js"></script>
+    
+    
+
+
+
+
+    
+</body>
+</html>
