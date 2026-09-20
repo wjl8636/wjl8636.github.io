@@ -182,14 +182,21 @@
             
             <span class="tag">
                 
-                <a href="/tags/LLM/" style="color: #ffa2c4">
+                <a href="/tags/LLM/" style="color: #03a9f4">
                     LLM
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #03a9f4">
+                <a href="/tags/%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8/" style="color: #00a596">
+                    工具调用
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #ff7d73">
                     工程实践
                 </a>
             </span>
@@ -205,13 +212,6 @@
                 
                 <a href="/tags/HITL/" style="color: #ffa2c4">
                     HITL
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8/" style="color: #00bcd4">
-                    工具调用
                 </a>
             </span>
             
@@ -284,19 +284,43 @@
 <p>其中以 <strong>Agent 主循环、权限决策、多智能体 Teams、文件级记忆</strong> 最具 Agent 工程代表性，本文作为主线展开，最后补上可观测性、韧性等支线。</p>
 <hr>
 <h2 id="2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎"><a href="#2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎" class="headerlink" title="2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎"></a>2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎</h2><p>整个系统的核心在 <code>personalcode/agent.py</code> 的 <code>Agent</code> 类。它没有把「让大模型干活」藏进一个黑盒函数，而是显式地跑一个 <strong>事件驱动的 ReAct 循环</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    iteration += <span class="number">1</span></span><br><span class="line">    <span class="keyword">if</span> <span class="variable language_">self</span>.max_iterations &gt; <span class="number">0</span> <span class="keyword">and</span> iteration &gt; <span class="variable language_">self</span>.max_iterations:</span><br><span class="line">        <span class="keyword">yield</span> ErrorEvent(...)          <span class="comment"># 强制终止上限</span></span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    <span class="comment"># 1. 注入环境、长期记忆、工具清单、协调/权限 reminder</span></span><br><span class="line">    <span class="comment"># 2. 流式读取 LLM 输出（StreamCollector）</span></span><br><span class="line">    <span class="comment"># 3. 模型一旦发出 tool_use，立刻提交执行（StreamingExecutor）</span></span><br><span class="line">    <span class="comment"># 4. 把 ToolResult 回填进对话历史 → 下一轮循环</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">while True:
+    iteration += 1
+    if self.max_iterations &gt; 0 and iteration &gt; self.max_iterations:
+        yield ErrorEvent(...)          # 强制终止上限
+        break
+    # 1. 注入环境、长期记忆、工具清单、协调/权限 reminder
+    # 2. 流式读取 LLM 输出（StreamCollector）
+    # 3. 模型一旦发出 tool_use，立刻提交执行（StreamingExecutor）
+    # 4. 把 ToolResult 回填进对话历史 → 下一轮循环
+</code></pre>
 <p>关键点：<code>Agent.run()</code> 是<strong>异步生成器</strong>，它 <code>yield</code> 的是一系列 <code>AgentEvent</code>。所有对外的「声音」都被建模成了<strong>事件类型联合</strong>（<code>agent.py:161</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">AgentEvent = (</span><br><span class="line">    StreamText | ThinkingText | RetryEvent</span><br><span class="line">    | ToolUseEvent | ToolResultEvent</span><br><span class="line">    | TurnComplete | LoopComplete | UsageEvent</span><br><span class="line">    | ErrorEvent | PermissionRequest</span><br><span class="line">    | CompactNotification | HookEvent</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">AgentEvent = (
+    StreamText | ThinkingText | RetryEvent
+    | ToolUseEvent | ToolResultEvent
+    | TurnComplete | LoopComplete | UsageEvent
+    | ErrorEvent | PermissionRequest
+    | CompactNotification | HookEvent
+)
+</code></pre>
 <blockquote>
 <p><strong>知识点：事件驱动主循环</strong><br>把「Agent 在干什么」从内部状态变成<strong>可被消费的事件流</strong>，是 Agent 工程的第一性原理。主循环只管 <code>yield</code> 事件，至于上层是 TUI、<code>-p</code> 非交互、还是 WebSocket 远程——都由调用方按需消费。这保证了<strong>同一套 Agent 内核能挂到不同的前端</strong>。</p>
 </blockquote>
 <p><code>__main__.py</code> 里就体现了这种解耦：同一个 <code>Agent.run()</code>，TUI 模式消费它渲染界面，<code>-p</code> 模式用 <code>stream-json</code> 把事件序列化成 NDJSON 喂给脚本。</p>
 <hr>
 <h2 id="3-核心二：工具抽象-——-Agent-长出「手」"><a href="#3-核心二：工具抽象-——-Agent-长出「手」" class="headerlink" title="3. 核心二：工具抽象 —— Agent 长出「手」"></a>3. 核心二：工具抽象 —— Agent 长出「手」</h2><p>一个只会「说话」的 Agent 改不了代码。系统用一套统一的 <code>Tool</code> 抽象（<code>personalcode/tools/base.py</code>）让 Agent 真正拿到外部世界的能力：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Tool</span>(<span class="title class_ inherited__">ABC</span>):</span><br><span class="line">    name: <span class="built_in">str</span></span><br><span class="line">    description: <span class="built_in">str</span></span><br><span class="line">    params_model: <span class="built_in">type</span>[BaseModel]      <span class="comment"># 用 pydantic 描述参数 schema</span></span><br><span class="line">    category: ToolCategory             <span class="comment"># &quot;read&quot; | &quot;write&quot; | &quot;command&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">is_concurrency_safe</span>(<span class="params">self, args</span>):  <span class="comment"># 按本次调用的实际参数判断能否并发</span></span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">self</span>.is_read_only</span><br><span class="line"></span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">execute</span>(<span class="params">self, params: BaseModel</span>) -&gt; ToolResult: ...</span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">class Tool(ABC):
+    name: str
+    description: str
+    params_model: type[BaseModel]      # 用 pydantic 描述参数 schema
+    category: ToolCategory             # &quot;read&quot; | &quot;write&quot; | &quot;command&quot;
 
+    def is_concurrency_safe(self, args):  # 按本次调用的实际参数判断能否并发
+        return self.is_read_only
+
+    @abstractmethod
+    async def execute(self, params: BaseModel) -&gt; ToolResult: ...
+</code></pre>
 <p>内置工具用 <code>create_default_registry()</code>（<code>tools/__init__.py:182</code>）装配：<code>ReadFile</code>、<code>WriteFile</code>、<code>EditFile</code>、<code>Bash</code>、<code>Glob</code>、<code>Grep</code>，再加上 <code>Agent</code>（派子 Agent）、<code>ToolSearch</code>、<code>mcp_call</code>、<code>SendMessage</code>、<code>TaskCreate</code> 等高级工具。</p>
 <blockquote>
 <p><strong>知识点：工具是 Agent 的「外设总线」</strong><br>把每个能力封装成 <code>name + description + params_model + execute()</code> 四件套，<code>params_model</code> 直接用 pydantic——<strong>schema 和校验二合一</strong>。新增一个工具 &#x3D; 新增一个类注册进去，Agent 就会在下一轮自动看到它的 schema 并学会调用。</p>
@@ -305,16 +329,31 @@
 <hr>
 <h2 id="4-核心三：流式工具执行-并发分批"><a href="#4-核心三：流式工具执行-并发分批" class="headerlink" title="4. 核心三：流式工具执行 + 并发分批"></a>4. 核心三：流式工具执行 + 并发分批</h2><p>Agent 一轮可能同时发出好几个工具调用。这里有个很微妙的工程问题：<strong>要不要等整个 LLM 响应流结束再执行工具？</strong> 如果等，用户会看到「思考思考……（十几秒）……刷地一下全干完」；如果不等、收到就跑，又会破坏模型给出的执行顺序（比如 WriteFile 之后紧跟一条依赖它的 Bash）。</p>
 <p>PersonalCode 的解法是 <code>StreamingExecutor</code>（<code>agent.py:280</code>）：<strong>在 LLM 流式输出期间就收集工具调用，等流结束后再按「并发安全的批」统一执行</strong>。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">partition_tool_calls</span>(<span class="params">tool_calls, registry</span>) -&gt; <span class="built_in">list</span>[ToolBatch]:</span><br><span class="line">    <span class="comment"># 相邻的并发安全调用归到同一批并发跑，其余各自独占一个串行批</span></span><br><span class="line">    <span class="keyword">for</span> tc <span class="keyword">in</span> tool_calls:</span><br><span class="line">        safe = tool.is_concurrency_safe(tc.arguments)</span><br><span class="line">        <span class="keyword">if</span> safe <span class="keyword">and</span> batches <span class="keyword">and</span> batches[-<span class="number">1</span>].concurrent:</span><br><span class="line">            batches[-<span class="number">1</span>].calls.append(tc)      <span class="comment"># 并入当前并发批</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            batches.append(ToolBatch(concurrent=safe, calls=[tc]))</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def partition_tool_calls(tool_calls, registry) -&gt; list[ToolBatch]:
+    # 相邻的并发安全调用归到同一批并发跑，其余各自独占一个串行批
+    for tc in tool_calls:
+        safe = tool.is_concurrency_safe(tc.arguments)
+        if safe and batches and batches[-1].concurrent:
+            batches[-1].calls.append(tc)      # 并入当前并发批
+        else:
+            batches.append(ToolBatch(concurrent=safe, calls=[tc]))
+</code></pre>
 <p>只读批用 <code>asyncio.gather</code> 并发执行，写&#x2F;命令批严格串行，<strong>批内有序、批间有序</strong>，所以拼回来的结果顺序就是模型给出的顺序。</p>
 <blockquote>
 <p><strong>知识点：工具调度的并发安全</strong><br>工具调度不是「全并发」也不是「全串行」，而是<strong>按数据依赖分批</strong>：只读不互扰的并发，会改状态的串行。既保住吞吐，又保住语义，这是生产级 Agent 的标配取舍。</p>
 </blockquote>
 <hr>
 <h2 id="5-核心四：人在回路（HITL）——-六层权限决策管线"><a href="#5-核心四：人在回路（HITL）——-六层权限决策管线" class="headerlink" title="5. 核心四：人在回路（HITL）—— 六层权限决策管线"></a>5. 核心四：人在回路（HITL）—— 六层权限决策管线</h2><p>PersonalCode 最鲜明的工程特质是<strong>把控制权交还给人</strong>。默认权限模式下，写文件和跑命令前都会先征求你的同意。这套逻辑在 <code>personalcode/permissions/checker.py</code> 的 <code>PermissionChecker.check()</code> 里，是一条 <strong>6 层决策管线</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">check</span>(<span class="params">self, tool, arguments</span>) -&gt; Decision:</span><br><span class="line">    <span class="comment"># Layer 0: Plan 模式例外放行（只允许 Agent/ToolSearch/AskUserQuestion/ExitPlanMode）</span></span><br><span class="line">    <span class="comment"># Layer 1: 安全的只读命令自动放行</span></span><br><span class="line">    <span class="comment"># Layer 1b: 危险命令黑名单（危险命令拦截，直接 deny）</span></span><br><span class="line">    <span class="comment"># Layer 1c: OS 沙箱开启时命令自动放行（内核兜底）</span></span><br><span class="line">    <span class="comment"># Layer 2: 路径沙箱（只读/写文件，受保护路径一律拒绝）</span></span><br><span class="line">    <span class="comment"># Layer 3: 规则引擎匹配（allow/ask/deny）</span></span><br><span class="line">    <span class="comment"># Layer 4: 权限模式兜底判定（default / acceptEdits / plan / bypassPermissions）</span></span><br><span class="line">    <span class="comment"># Layer 5: 触发人工确认（HITL）→ 弹 PermissionRequest</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def check(self, tool, arguments) -&gt; Decision:
+    # Layer 0: Plan 模式例外放行（只允许 Agent/ToolSearch/AskUserQuestion/ExitPlanMode）
+    # Layer 1: 安全的只读命令自动放行
+    # Layer 1b: 危险命令黑名单（危险命令拦截，直接 deny）
+    # Layer 1c: OS 沙箱开启时命令自动放行（内核兜底）
+    # Layer 2: 路径沙箱（只读/写文件，受保护路径一律拒绝）
+    # Layer 3: 规则引擎匹配（allow/ask/deny）
+    # Layer 4: 权限模式兜底判定（default / acceptEdits / plan / bypassPermissions）
+    # Layer 5: 触发人工确认（HITL）→ 弹 PermissionRequest
+</code></pre>
 <p>配合 <code>permissions/modes.py</code> 的四模式矩阵：</p>
 <table>
 <thead>
@@ -360,15 +399,22 @@
 <h2 id="6-核心五：上下文管理-——-auto-compact-与工具结果溢写"><a href="#6-核心五：上下文管理-——-auto-compact-与工具结果溢写" class="headerlink" title="6. 核心五：上下文管理 —— auto-compact 与工具结果溢写"></a>6. 核心五：上下文管理 —— auto-compact 与工具结果溢写</h2><p>长会话最大的敌人是上下文窗口。PersonalCode 做了<strong>两层防御</strong>（<code>context/</code>）：</p>
 <p><strong>Layer 1：工具结果溢写落盘。</strong> 单条工具输出超过 <code>MAX_OUTPUT_CHARS = 50000</code> 字符时，完整内容写盘，对话历史里只保留预览和文件路径（<code>tools/base.py:23</code>、<code>agent.py:1387</code> 的 <code>_maybe_persist_or_truncate</code>）。模型要全文就自己再 ReadFile——既保住上下文，又不丢信息。</p>
 <p><strong>Layer 2：auto-compact 自动压缩。</strong> 接近 context window 上限时，用一次 LLM 调用把对话压成摘要（<code>agent.py:645</code>、<code>context</code> 的 <code>auto_compact</code>）。压缩不是裸丢历史，而是保存一个 <code>RecoveryState</code>——把最近读过的文件和调过的 skill 快照下来，压缩后能<strong>重建工作上下文</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_snapshot_for_recovery</span>(<span class="params">self, tc, result</span>):   <span class="comment"># agent.py:1063</span></span><br><span class="line">    <span class="keyword">if</span> tc.tool_name != <span class="string">&quot;ReadFile&quot;</span>: <span class="keyword">return</span>       <span class="comment"># 只快照 ReadFile</span></span><br><span class="line">    <span class="variable language_">self</span>.recovery_state.record_file_read(path, content)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def _snapshot_for_recovery(self, tc, result):   # agent.py:1063
+    if tc.tool_name != &quot;ReadFile&quot;: return       # 只快照 ReadFile
+    self.recovery_state.record_file_read(path, content)
+</code></pre>
 <blockquote>
 <p><strong>知识点：Agent 的上下文管理策略</strong><br>上下文不是「满了就完蛋」，而是可以<strong>分层治理</strong>：超大的工具结果溢写落盘、过长的历史摘要压缩、关键工作上下文做恢复快照。这三点合起来，才能让一个 Agent 在一轮几百次工具调用的长任务里不「失忆」。</p>
 </blockquote>
 <hr>
 <h2 id="7-核心六：文件级长期记忆-——-用户级-项目级双层"><a href="#7-核心六：文件级长期记忆-——-用户级-项目级双层" class="headerlink" title="7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层"></a>7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层</h2><p>PersonalCode 的记忆不是塞在数据库向量里，而是<strong>用普通 Markdown 文件组织</strong>（<code>personalcode/memory/auto_memory.py</code>）。每条记忆一个 <code>.md</code>，带 frontmatter：</p>
-<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">name: my-kebab-case-name</span><br><span class="line">description: 一句话描述</span><br><span class="line"><span class="section">type: user | feedback | project | reference   # 类型决定存到哪个目录</span></span><br><span class="line"><span class="section">---</span></span><br><span class="line">正文内容…</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-markdown">---
+name: my-kebab-case-name
+description: 一句话描述
+type: user | feedback | project | reference   # 类型决定存到哪个目录
+---
+正文内容…
+</code></pre>
 <ul>
 <li><strong>用户级</strong>（<code>~/.personalcode/memory/</code>）：<code>user</code> &#x2F; <code>feedback</code> 类型，跨项目跟随你。</li>
 <li><strong>项目级</strong>（<code>&lt;project&gt;/.personalcode/memory/</code>）：<code>project</code> &#x2F; <code>reference</code> 类型，可提交进 git 团队共享。</li>
@@ -386,8 +432,11 @@
 <li><strong>按上下文重叠决定 continue vs spawn</strong>：研究已覆盖目标文件就 <code>SendMessage</code> 续写，探索过宽就新派一个干净的。</li>
 </ul>
 <p>还专门处理了<strong>长会话漂移</strong>问题（<code>coordinator.py:211</code>）：那份 8KB 的调度指引首轮全文注入，之后每 5 轮才复述一次全文，中间轮只发精简版 <code>COORDINATOR_SPARSE_REMINDER</code>，避免重复内容把省下来的上下文又填回去。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">get_coordinator_reminder</span>(<span class="params">iteration, agent_catalog=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="keyword">if</span> iteration &lt;= <span class="number">1</span> <span class="keyword">or</span> (iteration - <span class="number">1</span>) % REMINDER_INTERVAL == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> get_coordinator_system_prompt(agent_catalog=agent_catalog)  <span class="comment"># 全文</span></span><br><span class="line">    <span class="keyword">return</span> COORDINATOR_SPARSE_REMINDER                                     <span class="comment"># 精简版</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def get_coordinator_reminder(iteration, agent_catalog=None):
+    if iteration &lt;= 1 or (iteration - 1) % REMINDER_INTERVAL == 0:
+        return get_coordinator_system_prompt(agent_catalog=agent_catalog)  # 全文
+    return COORDINATOR_SPARSE_REMINDER                                     # 精简版
+</code></pre>
 <p>Worker 之间的通信走<strong>邮箱 + 共享任务板</strong>：Lead 派活写入邮箱，Worker 主循环用 <code>_consume_mailbox</code>（<code>agent.py:893</code>）在每轮迭代开始时消费；队员通过 <code>TaskCreate/TaskGet/TaskUpdate</code> 读写团队共享的 <code>tasks.json</code>。多 Agent 后端支持 <code>in-process</code> &#x2F; <code>tmux</code> &#x2F; <code>iTerm2</code> 三种 spawn 方式（<code>teams/models.py</code> 的 <code>BackendType</code>）。</p>
 <blockquote>
 <p><strong>知识点：协调者模式（Coordinator）</strong><br>处理复杂长任务时，「一个超大 Agent」不如「一个调度者 + 多个专职 Worker」：调度者上下文里只放<strong>任务分解、Worker 状态、汇总</strong>，具体脏活分给专用 Worker。代价是<strong>交接契约</strong>要极其清晰（自包含 prompt、结构化通知、按名寻址），这正是 Lead prompt 花大篇幅写「怎么写好 Worker prompt」的原因。</p>
@@ -413,12 +462,22 @@
 <hr>
 <h2 id="11-可观测性：生命周期-Hooks-与父子-Trace-树"><a href="#11-可观测性：生命周期-Hooks-与父子-Trace-树" class="headerlink" title="11. 可观测性：生命周期 Hooks 与父子 Trace 树"></a>11. 可观测性：生命周期 Hooks 与父子 Trace 树</h2><p>一个健壮的 Agent 系统必须<strong>把「它在想什么、在做什么」变成可观测的事件流</strong>。PersonalCode 从两个维度做可观测：</p>
 <p><strong>① Hooks 事件协议（<code>hooks/events.py</code>）。</strong> 定义了五层生命周期事件：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">LifecycleEvent</span>(<span class="title class_ inherited__">StrEnum</span>):</span><br><span class="line">    SESSION_START / SESSION_END      <span class="comment"># 会话级</span></span><br><span class="line">    TURN_START / TURN_END            <span class="comment"># 轮次级</span></span><br><span class="line">    PRE_TOOL_USE / POST_TOOL_USE     <span class="comment"># 工具级</span></span><br><span class="line">    PRE_SEND / POST_RECEIVE          <span class="comment"># 消息级</span></span><br><span class="line">    STARTUP / SHUTDOWN / ERROR / COMPACT / PERMISSION_REQUEST / FILE_CHANGE / COMMAND_EXECUTE  <span class="comment"># 系统级</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class LifecycleEvent(StrEnum):
+    SESSION_START / SESSION_END      # 会话级
+    TURN_START / TURN_END            # 轮次级
+    PRE_TOOL_USE / POST_TOOL_USE     # 工具级
+    PRE_SEND / POST_RECEIVE          # 消息级
+    STARTUP / SHUTDOWN / ERROR / COMPACT / PERMISSION_REQUEST / FILE_CHANGE / COMMAND_EXECUTE  # 系统级
+</code></pre>
 <p>主循环在这些节点 <code>yield HookEvent</code>，<code>HookEngine</code> 可接自定义执行器，钩子的输出还会被注入回对话上下文——实现了「钩子既是观察点，又是干预点」。</p>
 <p><strong>② Trace 树（<code>agents/trace.py</code>）。</strong> 每个 Agent 实例都有 <code>agent_id</code>，子 Agent 记录 <code>parent_id</code>，归属同一 <code>trace_id</code>，形成一棵<strong>父子调用树</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">TraceNode</span>:</span><br><span class="line">    agent_id: <span class="built_in">str</span></span><br><span class="line">    parent_id: <span class="built_in">str</span> | <span class="literal">None</span></span><br><span class="line">    trace_id: <span class="built_in">str</span></span><br><span class="line">    input_tokens: <span class="built_in">int</span>; output_tokens: <span class="built_in">int</span></span><br><span class="line">    tool_call_count: <span class="built_in">int</span>; status: <span class="built_in">str</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class TraceNode:
+    agent_id: str
+    parent_id: str | None
+    trace_id: str
+    input_tokens: int; output_tokens: int
+    tool_call_count: int; status: str
+</code></pre>
 <p><code>TraceManager.get_tree(trace_id)</code> 能聚合整棵树的 token 消耗——<code>/trace</code> 命令把它渲染出来，让你看清「这一轮任务是谁派给谁、谁烧了多少 token」。</p>
 <blockquote>
 <p><strong>知识点：Agent 的可观测性</strong><br>主循环事件流 &#x3D; 实时「它在干嘛」；trace 树 &#x3D; 事后「它是怎么派生的、烧了多少」。两者配合，一个多智能体系统才不是黑盒——这是排障、计费、调优的地基。</p>
@@ -434,8 +493,23 @@
 </ul>
 <hr>
 <h2 id="13-架构全景回顾"><a href="#13-架构全景回顾" class="headerlink" title="13. 架构全景回顾"></a>13. 架构全景回顾</h2><p>把上述各线拼起来，整个 Agent 系统的架构就是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────── 前端：Textual TUI ｜ 浏览器(WebSocket) ｜ -p 非交互 / stream-json ───────────────────────┐</span><br><span class="line">│  流式输出 · 思考 · 工具调用进度 · 权限弹窗 · 多智能体调度指示 · 父子 Trace 树                                  │</span><br><span class="line">└─────────────────────────────────────────────▲ AgentEvent 事件流 ──────────────────────────────────────┘</span><br><span class="line">┌────────────────────────────────────────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                                     Agent 主循环（agent.py）—— ReAct                                │</span><br><span class="line">│    Thought → ToolUse(并发分批) → 权限决策(6层 HITL) → ToolResult(溢写落盘) → Observation → Loop       │</span><br><span class="line">│    · StreamingExecutor 流式执行 · auto-compact(摘要+恢复) · 记忆自动提取 · max_tokens 自愈            │</span><br><span class="line">└──────┬──────────────┬───────────────┬───────────────┬────────────────┬────────────────────────────┘</span><br><span class="line">       ▼              ▼               ▼               ▼                ▼</span><br><span class="line">    工具系统         权限决策         长期记忆         多智能体 Teams    MCP / Skill 扩展</span><br><span class="line">    (tools/)        (permissions/)   (memory/)       (teams/)        (mcp/ skills/)</span><br><span class="line">   Read/Write/Edit  4模式×6层管线     用户级/项目级    Lead→Worker      ToolSearch 延迟加载</span><br><span class="line">   Bash/Glob/Grep   危险命令黑名单     MEMORY.md索引    邮箱/共享任务     可插拔服务器</span><br><span class="line">   Agent子Agent      路径沙箱+规则     自动提取去重      Verification     程序记忆</span><br><span class="line">       ▼</span><br><span class="line">   异构 LLM（anthropic / openai / openai-compat）· 自动探测 context window</span><br></pre></td></tr></table></figure>
-
+<pre><code>┌─────────────────────── 前端：Textual TUI ｜ 浏览器(WebSocket) ｜ -p 非交互 / stream-json ───────────────────────┐
+│  流式输出 · 思考 · 工具调用进度 · 权限弹窗 · 多智能体调度指示 · 父子 Trace 树                                  │
+└─────────────────────────────────────────────▲ AgentEvent 事件流 ──────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     Agent 主循环（agent.py）—— ReAct                                │
+│    Thought → ToolUse(并发分批) → 权限决策(6层 HITL) → ToolResult(溢写落盘) → Observation → Loop       │
+│    · StreamingExecutor 流式执行 · auto-compact(摘要+恢复) · 记忆自动提取 · max_tokens 自愈            │
+└──────┬──────────────┬───────────────┬───────────────┬────────────────┬────────────────────────────┘
+       ▼              ▼               ▼               ▼                ▼
+    工具系统         权限决策         长期记忆         多智能体 Teams    MCP / Skill 扩展
+    (tools/)        (permissions/)   (memory/)       (teams/)        (mcp/ skills/)
+   Read/Write/Edit  4模式×6层管线     用户级/项目级    Lead→Worker      ToolSearch 延迟加载
+   Bash/Glob/Grep   危险命令黑名单     MEMORY.md索引    邮箱/共享任务     可插拔服务器
+   Agent子Agent      路径沙箱+规则     自动提取去重      Verification     程序记忆
+       ▼
+   异构 LLM（anthropic / openai / openai-compat）· 自动探测 context window
+</code></pre>
 <hr>
 <h2 id="14-Agent-工程师的几点心得"><a href="#14-Agent-工程师的几点心得" class="headerlink" title="14. Agent 工程师的几点心得"></a>14. Agent 工程师的几点心得</h2><ol>
 <li><strong>事件驱动，而非黑盒函数。</strong> 把 Agent 的每一步（思考、用工具、要授权、压缩上下文）都 <code>yield</code> 成事件，内核就能挂 TUI、CLI、WebSocket 任意前端，可观测性和复用性一起拿到。</li>
@@ -447,8 +521,21 @@
 <li><strong>永远有终止条件。</strong> 任何重试 &#x2F; 反思 &#x2F; 迭代循环都要有硬性上限，否则一次失控就烧光预算。</li>
 </ol>
 <hr>
-<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 克隆并安装（要求 Python ≥ 3.11，推荐 uv）</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/wjl8636/Personal-Code-Assistant.git</span><br><span class="line"><span class="built_in">cd</span> Personal-Code-Assistant</span><br><span class="line">uv <span class="built_in">sync</span> --group dev</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 配置模型 Provider</span></span><br><span class="line"><span class="built_in">cp</span> .personalcode/config.yaml.example .personalcode/config.yaml</span><br><span class="line"><span class="comment">#    编辑 providers：填 anthropic / openai / openai-compat（DeepSeek、Kimi…）的 api_key 与 model</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 启动</span></span><br><span class="line">personalcode                                    <span class="comment"># 交互式 TUI</span></span><br><span class="line">personalcode -p <span class="string">&quot;解释这个仓库的架构&quot;</span>              <span class="comment"># 非交互模式</span></span><br><span class="line">personalcode --remote                           <span class="comment"># 浏览器访问 http://localhost:18888</span></span><br><span class="line">personalcode --mode bypassPermissions           <span class="comment"># 覆盖权限模式</span></span><br></pre></td></tr></table></figure>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 克隆并安装（要求 Python ≥ 3.11，推荐 uv）
+git clone https://github.com/wjl8636/Personal-Code-Assistant.git
+cd Personal-Code-Assistant
+uv sync --group dev
 
+# 2. 配置模型 Provider
+cp .personalcode/config.yaml.example .personalcode/config.yaml
+#    编辑 providers：填 anthropic / openai / openai-compat（DeepSeek、Kimi…）的 api_key 与 model
+
+# 3. 启动
+personalcode                                    # 交互式 TUI
+personalcode -p &quot;解释这个仓库的架构&quot;              # 非交互模式
+personalcode --remote                           # 浏览器访问 http://localhost:18888
+personalcode --mode bypassPermissions           # 覆盖权限模式
+</code></pre>
 <p>跑起来后，试着用 <code>/trace</code> 看一次任务的父子调用树，用 <code>/memory</code> 看它记住了你什么，再给 <code>Teams</code> 派一个跨模块的重构任务，看 Lead 如何拆解、Worker 如何并行、Verification 如何回来挑刺。</p>
 <hr>
 <p><em>本文内容均基于项目源码（<code>personalcode/agent.py</code>、<code>tools/</code>、<code>permissions/</code>、<code>memory/</code>、<code>teams/</code> 等）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">https://github.com/wjl8636/Personal-Code-Assistant</a></em> ⭐</p>

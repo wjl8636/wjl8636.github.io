@@ -175,13 +175,6 @@
             
             <span class="tag">
                 
-                <a href="/tags/RAG/" style="color: #03a9f4">
-                    RAG
-                </a>
-            </span>
-            
-            <span class="tag">
-                
                 <a href="/tags/LLM/" style="color: #00a596">
                     LLM
                 </a>
@@ -196,7 +189,14 @@
             
             <span class="tag">
                 
-                <a href="/tags/%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2/" style="color: #ff7d73">
+                <a href="/tags/RAG/" style="color: #00a596">
+                    RAG
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2/" style="color: #ffa2c4">
                     向量检索
                 </a>
             </span>
@@ -253,25 +253,59 @@
 </tbody></table>
 <p>其中<strong>知识库全量链</strong>是 RAG 工程的核心，本文作为主线展开，最后补上轻量链、推荐问题、前端引用渲染等支线。</p>
 <p>整套系统的工程形态是 <strong>FastAPI 后端 + React 前端</strong>，基础设施用 Docker Compose 编排了 4 个服务：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">┌────────────┐     HTTP/SSE      ┌─────────────┐</span><br><span class="line">│  React 前端  │ ────────────────▶ │  swxy_api   │    FastAPI + Uvicorn (:8000)</span><br><span class="line">│  (Vite 5181)│ ◀──────────────── │  (后端引擎)   │</span><br><span class="line">└────────────┘     流式响应       └──────┬──────┘</span><br><span class="line">                                        │</span><br><span class="line">                    ┌───────────────────┼───────────────────┐</span><br><span class="line">               ┌────▼─────┐       ┌─────▼────┐         ┌────▼────┐</span><br><span class="line">               │   ES 8   │       │ PostgreSQL │         │  Redis  │</span><br><span class="line">               │ 检索+向量 │       │ 用户/会话/消息│         │ 快速解析缓存 │</span><br><span class="line">               └──────────┘       └──────────┘         └─────────┘</span><br></pre></td></tr></table></figure>
-
+<pre><code>┌────────────┐     HTTP/SSE      ┌─────────────┐
+│  React 前端  │ ────────────────▶ │  swxy_api   │    FastAPI + Uvicorn (:8000)
+│  (Vite 5181)│ ◀──────────────── │  (后端引擎)   │
+└────────────┘     流式响应       └──────┬──────┘
+                                        │
+                    ┌───────────────────┼───────────────────┐
+               ┌────▼─────┐       ┌─────▼────┐         ┌────▼────┐
+               │   ES 8   │       │ PostgreSQL │         │  Redis  │
+               │ 检索+向量 │       │ 用户/会话/消息│         │ 快速解析缓存 │
+               └──────────┘       └──────────┘         └─────────┘
+</code></pre>
 <blockquote>
 <p><strong>知识点：RAG &#x3D; 检索增强生成</strong><br>核心思想是把「让大模型背下所有知识」替换成「每次提问时从私有知识库里检索最相关的片段，拼进上下文再生成」。既缓解了 LLM 的幻觉与知识截断，又让回答可溯源、可更新（改库即可改答案，无需重训模型）。这个项目把这条链路的每个环节都做到了工程级实现。</p>
 </blockquote>
 <hr>
 <h2 id="2-核心一：文档解析-——-金融研报为何难啃"><a href="#2-核心一：文档解析-——-金融研报为何难啃" class="headerlink" title="2. 核心一：文档解析 —— 金融研报为何难啃"></a>2. 核心一：文档解析 —— 金融研报为何难啃</h2><p>RAG 的质量上限在<strong>入口</strong>：文档没解析好，后面检索、生成都是空中楼阁。金融研报（PDF &#x2F; DOCX &#x2F; Excel）恰恰是文档解析里最「脏」的一类——大段文字、密集表格、图表、公式混排。这个项目复用 RAGFlow 的 <strong>DeepDoc</strong> 深度解析引擎，代码在 <code>backend/app/service/core/deepdoc/</code>。</p>
 <p>单个入口函数统一调度，按扩展名路由（<code>service/core/rag/app/naive.py</code> 的 <code>chunk()</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">chunk</span>(<span class="params">filename, binary=<span class="literal">None</span>, from_page=<span class="number">0</span>, to_page=<span class="number">100000</span>,</span></span><br><span class="line"><span class="params">          lang=<span class="string">&quot;Chinese&quot;</span>, callback=<span class="literal">None</span>, **kwargs</span>):</span><br><span class="line">    parser_config = kwargs.get(<span class="string">&quot;parser_config&quot;</span>, &#123;</span><br><span class="line">        <span class="string">&quot;chunk_token_num&quot;</span>: <span class="number">128</span>, <span class="string">&quot;delimiter&quot;</span>: <span class="string">&quot;\n!?。；！？&quot;</span>,</span><br><span class="line">        <span class="string">&quot;layout_recognize&quot;</span>: <span class="string">&quot;DeepDOC&quot;</span>&#125;)</span><br><span class="line">    <span class="keyword">if</span> re.search(<span class="string">r&quot;\.docx$&quot;</span>, filename, re.IGNORECASE):</span><br><span class="line">        sections, tables = Docx()(filename, binary)</span><br><span class="line">    <span class="keyword">elif</span> re.search(<span class="string">r&quot;\.pdf$&quot;</span>, filename, re.IGNORECASE):</span><br><span class="line">        pdf_parser = Pdf()   <span class="comment"># 或 layout_recognize == &quot;Plain Text&quot; 时用 PlainParser</span></span><br><span class="line">        sections, tables = pdf_parser(...)</span><br><span class="line">    <span class="keyword">elif</span> re.search(<span class="string">r&quot;\.xlsx?$&quot;</span>, filename, re.IGNORECASE):</span><br><span class="line">        sections = [(_, <span class="string">&quot;&quot;</span>) <span class="keyword">for</span> _ <span class="keyword">in</span> excel_parser(binary) <span class="keyword">if</span> _]</span><br><span class="line">    <span class="comment"># ... txt / md / html / json / doc</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def chunk(filename, binary=None, from_page=0, to_page=100000,
+          lang=&quot;Chinese&quot;, callback=None, **kwargs):
+    parser_config = kwargs.get(&quot;parser_config&quot;, &#123;
+        &quot;chunk_token_num&quot;: 128, &quot;delimiter&quot;: &quot;\n!?。；！？&quot;,
+        &quot;layout_recognize&quot;: &quot;DeepDOC&quot;&#125;)
+    if re.search(r&quot;\.docx$&quot;, filename, re.IGNORECASE):
+        sections, tables = Docx()(filename, binary)
+    elif re.search(r&quot;\.pdf$&quot;, filename, re.IGNORECASE):
+        pdf_parser = Pdf()   # 或 layout_recognize == &quot;Plain Text&quot; 时用 PlainParser
+        sections, tables = pdf_parser(...)
+    elif re.search(r&quot;\.xlsx?$&quot;, filename, re.IGNORECASE):
+        sections = [(_, &quot;&quot;) for _ in excel_parser(binary) if _]
+    # ... txt / md / html / json / doc
+</code></pre>
 <h3 id="2-1-PDF：版面分析-表格识别-OCR（DeepDoc）"><a href="#2-1-PDF：版面分析-表格识别-OCR（DeepDoc）" class="headerlink" title="2.1 PDF：版面分析 + 表格识别 + OCR（DeepDoc）"></a>2.1 PDF：版面分析 + 表格识别 + OCR（DeepDoc）</h3><p>对研报最关键的 PDF，<code>Pdf</code> 解析器（<code>deepdoc/parser/pdf_parser.py</code>）走的是重流程，顺序在 <code>naive.py</code> 里看得一清二楚：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Pdf</span>(<span class="title class_ inherited__">PdfParser</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__call__</span>(<span class="params">self, filename, binary, from_page=<span class="number">0</span>, to_page=<span class="number">100000</span>, zoomin=<span class="number">3</span>, callback=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="variable language_">self</span>.__images__(...)          <span class="comment"># 1. 页面栅格化/OCR</span></span><br><span class="line">        callback(msg=<span class="string">&quot;OCR finished&quot;</span>)</span><br><span class="line">        <span class="variable language_">self</span>._layouts_rec(zoomin)     <span class="comment"># 2. 版面分析（标题/正文/图/表区域识别）</span></span><br><span class="line">        callback(<span class="number">0.63</span>, <span class="string">&quot;Layout analysis&quot;</span>)</span><br><span class="line">        <span class="variable language_">self</span>._table_transformer_job(zoomin)   <span class="comment"># 3. 表格结构识别（还原行列）</span></span><br><span class="line">        <span class="variable language_">self</span>._text_merge()            <span class="comment"># 4. 文本合并</span></span><br><span class="line">        tbls = <span class="variable language_">self</span>._extract_table_figure(...)  <span class="comment"># 5. 抽取表格与图表</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class Pdf(PdfParser):
+    def __call__(self, filename, binary, from_page=0, to_page=100000, zoomin=3, callback=None):
+        self.__images__(...)          # 1. 页面栅格化/OCR
+        callback(msg=&quot;OCR finished&quot;)
+        self._layouts_rec(zoomin)     # 2. 版面分析（标题/正文/图/表区域识别）
+        callback(0.63, &quot;Layout analysis&quot;)
+        self._table_transformer_job(zoomin)   # 3. 表格结构识别（还原行列）
+        self._text_merge()            # 4. 文本合并
+        tbls = self._extract_table_figure(...)  # 5. 抽取表格与图表
+</code></pre>
 <blockquote>
 <p><strong>知识点：版面分析（Layout Analysis）</strong><br>直接按「坐标顺序」抽 PDF 文本，会把页眉、页脚、图表标注、两栏正文搅在一起。DeepDoc 用深度学习模型先识别出每个区域是「标题 &#x2F; 正文 &#x2F; 表格 &#x2F; 图」再重组，这样切片后每段语义才完整。<code>layout_recognize</code> 可切到 <code>&quot;Plain Text&quot;</code> 走轻量解析，是「精度 vs 速度」的开关。</p>
 </blockquote>
 <h3 id="2-2-Excel-表格：转-HTML-保结构"><a href="#2-2-Excel-表格：转-HTML-保结构" class="headerlink" title="2.2 Excel 表格：转 HTML 保结构"></a>2.2 Excel 表格：转 HTML 保结构</h3><p>研报里的财务数据多在 Excel，<code>excel_parser.py</code> 把表格直接转为 HTML 表格串，避免检索时丢失行列关系：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">html</span>(<span class="params">self, fnm, chunk_rows=<span class="number">256</span></span>):</span><br><span class="line">    tb_chunks = []</span><br><span class="line">    <span class="keyword">for</span> rows <span class="keyword">in</span> chunks_of(rows, chunk_rows):</span><br><span class="line">        html = rows.to_html(...)   <span class="comment"># DataFrame → &lt;table&gt;</span></span><br><span class="line">        tb_chunks.append(html)</span><br><span class="line">    <span class="keyword">return</span> tb_chunks</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def html(self, fnm, chunk_rows=256):
+    tb_chunks = []
+    for rows in chunks_of(rows, chunk_rows):
+        html = rows.to_html(...)   # DataFrame → &lt;table&gt;
+        tb_chunks.append(html)
+    return tb_chunks
+</code></pre>
 <blockquote>
 <p><strong>知识点：表格结构化</strong><br>对强结构的表格数据，直接存「平文本」会丧失语义（「营收」「同比」各自离散）。转成 HTML 表格后，向量化和关键词检索都能把整行作为检索单元，召回质量明显更高。</p>
 </blockquote>
@@ -282,82 +316,154 @@
 <li><strong>切分符</strong>：<code>delimiter = &quot;\n!?。；！？&quot;</code>（中英文句号、问号、分号、换行）</li>
 <li>逻辑：<strong>先按分隔符把长文切碎成「句」，再贪心合并进不超过 128 token 的 chunk</strong>，并保留相邻关系。</li>
 </ul>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">chunks = naive_merge(sections, <span class="built_in">int</span>(parser_config.get(<span class="string">&quot;chunk_token_num&quot;</span>, <span class="number">128</span>)),</span><br><span class="line">                     parser_config.get(<span class="string">&quot;delimiter&quot;</span>, <span class="string">&quot;\n!?。；！？&quot;</span>))</span><br><span class="line">res.extend(tokenize_chunks(chunks, doc, is_english, pdf_parser))</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">chunks = naive_merge(sections, int(parser_config.get(&quot;chunk_token_num&quot;, 128)),
+                     parser_config.get(&quot;delimiter&quot;, &quot;\n!?。；！？&quot;))
+res.extend(tokenize_chunks(chunks, doc, is_english, pdf_parser))
+</code></pre>
 <p><code>tokenize_chunks</code> 对每个 chunk 产出<strong>多份表示</strong>（<code>rag/nlp/__init__.py</code>）：<code>content_ltks</code>（轻量分词）、<code>content_sm_ltks</code>（细粒度&#x2F;去除停用词）、<code>content_with_weight</code>（原文本 + 权重标记）——后面检索时它们各司其职。</p>
 <blockquote>
 <p><strong>知识点：为什么是 128 token，不是越长越好</strong><br>chunk 太短召回不全、太长噪声多且稀释向量语义。研究类文档通常选 128~256 token 的「中分块」，并配合下一节的稠密&#x2F;稀疏双表示来召回。工程里这个值是<strong>可调的超参</strong>，<code>parser_config</code> 处处可覆盖，调优时应结合真实问题的命中率来做 A&#x2F;B，而不是拍脑袋。</p>
 </blockquote>
 <hr>
 <h2 id="4-核心三：向量化与入库-——-批量、定维、Dense-字段"><a href="#4-核心三：向量化与入库-——-批量、定维、Dense-字段" class="headerlink" title="4. 核心三：向量化与入库 —— 批量、定维、Dense 字段"></a>4. 核心三：向量化与入库 —— 批量、定维、Dense 字段</h2><p>切片完成后进入<strong>入库链</strong>：<code>service/core/file_parse.py</code> 的 <code>execute_insert_process</code> 串起「解析 → 向量化 → 写 ES」：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">execute_insert_process</span>(<span class="params">file_path, file_name, index_name</span>):</span><br><span class="line">    documents = parse(file_path)                  <span class="comment"># 1. 解析 + 切片</span></span><br><span class="line">    processed_documents = process_items(documents, file_name, index_name)  <span class="comment"># 2. embedding</span></span><br><span class="line">    es_connection.insert(documents=processed_documents, indexName=index_name)  <span class="comment"># 3. 入库</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def execute_insert_process(file_path, file_name, index_name):
+    documents = parse(file_path)                  # 1. 解析 + 切片
+    processed_documents = process_items(documents, file_name, index_name)  # 2. embedding
+    es_connection.insert(documents=processed_documents, indexName=index_name)  # 3. 入库
+</code></pre>
 <h3 id="4-1-批量-embedding（DashScope-text-embedding-v3）"><a href="#4-1-批量-embedding（DashScope-text-embedding-v3）" class="headerlink" title="4.1 批量 embedding（DashScope text-embedding-v3）"></a>4.1 批量 embedding（DashScope <code>text-embedding-v3</code>）</h3><p>向量化在 <code>model.py</code> 与 <code>file_parse.py</code> 里有两个工程细节：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">batch_generate_embeddings</span>(<span class="params">texts, batch_size=<span class="number">10</span></span>):</span><br><span class="line">    embeddings = generate_embedding(texts)   <span class="comment"># 批量，DashScope 限制一次 ≤10</span></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">generate_embedding</span>(<span class="params">text, model_name=<span class="string">&quot;text-embedding-v3&quot;</span>,</span></span><br><span class="line"><span class="params">                       dimensions=<span class="number">1024</span>, encoding_format=<span class="string">&quot;float&quot;</span></span>):</span><br><span class="line">    completion = client.embeddings.create(</span><br><span class="line">        model=model_name, <span class="built_in">input</span>=text,</span><br><span class="line">        dimensions=dimensions, encoding_format=encoding_format)</span><br><span class="line">    <span class="keyword">return</span> completion.data[<span class="number">0</span>].embedding</span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">def batch_generate_embeddings(texts, batch_size=10):
+    embeddings = generate_embedding(texts)   # 批量，DashScope 限制一次 ≤10
+    ...
 
+def generate_embedding(text, model_name=&quot;text-embedding-v3&quot;,
+                       dimensions=1024, encoding_format=&quot;float&quot;):
+    completion = client.embeddings.create(
+        model=model_name, input=text,
+        dimensions=dimensions, encoding_format=encoding_format)
+    return completion.data[0].embedding
+</code></pre>
 <ul>
 <li><strong>定维 1024</strong>：<code>dimensions=1024</code> 让所有向量维度一致，才能存在同一个 ES 字段并做余弦相似度。</li>
 <li><strong>批量 ≤10</strong>：DashScope 单次请求上限，工程上写死 <code>batch_size=10</code>。</li>
 </ul>
 <h3 id="4-2-Schema-设计：向量存进「动态稠密字段」"><a href="#4-2-Schema-设计：向量存进「动态稠密字段」" class="headerlink" title="4.2 Schema 设计：向量存进「动态稠密字段」"></a>4.2 Schema 设计：向量存进「动态稠密字段」</h3><p><code>process_items</code> 里最关键的一行是把向量写进一个<strong>以维度命名的字段</strong> <code>q_1024_vec</code>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">d[<span class="string">f&quot;q_<span class="subst">&#123;<span class="built_in">len</span>(embedding)&#125;</span>_vec&quot;</span>] = embedding   <span class="comment"># q_1024_vec → 1024 维 dense_vector</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">d[f&quot;q_&#123;len(embedding)&#125;_vec&quot;] = embedding   # q_1024_vec → 1024 维 dense_vector
+</code></pre>
 <p>同时记录文档元信息：<code>docnm_kwd</code>、<code>doc_id</code>、<code>kb_id</code>、<code>chunk_id</code>（用 <code>xxhash</code> 生成，可去重）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">chunck_id = xxhash.xxh64((item[<span class="string">&quot;content_with_weight&quot;</span>] + index_name).encode()).hexdigest()</span><br><span class="line">d[<span class="string">&quot;doc_id&quot;</span>] = xxhash.xxh64(file_name.encode()).hexdigest()</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">chunck_id = xxhash.xxh64((item[&quot;content_with_weight&quot;] + index_name).encode()).hexdigest()
+d[&quot;doc_id&quot;] = xxhash.xxh64(file_name.encode()).hexdigest()
+</code></pre>
 <blockquote>
 <p><strong>知识点：Dense 字段的动态映射</strong><br>ES 通过 <code>mapping.json</code> 里的 <code>dynamic_templates</code> 自动把 <code>q_*_vec</code> 识别为 dense_vector 字段，而 <code>*_ltks</code>&#x2F;<code>*_tks</code> 这类被映射为可分词的文本（keyword&#x2F;term）字段。这样<strong>一份 chunk 同时具备向量表示 + 关键词表示</strong>，为混合检索打下基础。这比「只存向量」的插件式方案更可控、更节省额外组件。</p>
 </blockquote>
 <hr>
 <h2 id="5-核心四：混合检索-——-关键词-向量-相似度"><a href="#5-核心四：混合检索-——-关键词-向量-相似度" class="headerlink" title="5. 核心四：混合检索 —— 关键词 + 向量 + 相似度"></a>5. 核心四：混合检索 —— 关键词 + 向量 + 相似度</h2><p>这是本项目 RAG 工程味道最浓的一块。检索走 <code>service/core/retrieval.py</code> → <code>Dealer.retrieval</code>（<code>rag/nlp/search_v2.py</code>）。入口把 <code>vector_similarity_weight</code> 设为 0.6：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">retrieve_content</span>(<span class="params">indexNames, question</span>):</span><br><span class="line">    results = dealer.retrieval(question=question, embd_mdl=<span class="literal">None</span>,</span><br><span class="line">                               tenant_ids=indexNames, kb_ids=<span class="literal">None</span>,</span><br><span class="line">                               vector_similarity_weight=<span class="number">0.6</span>,   <span class="comment"># ← 核心超参</span></span><br><span class="line">                               page=<span class="number">1</span>, page_size=<span class="number">5</span>)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def retrieve_content(indexNames, question):
+    results = dealer.retrieval(question=question, embd_mdl=None,
+                               tenant_ids=indexNames, kb_ids=None,
+                               vector_similarity_weight=0.6,   # ← 核心超参
+                               page=1, page_size=5)
+</code></pre>
 <p>而 <code>Dealer.retrieval</code>（<code>search_v2.py:336</code>）内部有两级排序：</p>
 <ol>
 <li><strong>先重排候选</strong>：把 top 结果取到 <code>RERANK_PAGE_LIMIT * page_size</code>（≥128 条）</li>
 <li><strong>再按混合相似度排序挑前 N</strong>：<code>rerank_by_model</code>（有重排模型）或 <code>rerank</code>（无模型）</li>
 </ol>
 <h3 id="5-1-混合相似度公式"><a href="#5-1-混合相似度公式" class="headerlink" title="5.1 混合相似度公式"></a>5.1 混合相似度公式</h3><p>核心计算在 <code>query.py:200</code>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">hybrid_similarity</span>(<span class="params">self, avec, bvecs, atks, btkss, tkweight=<span class="number">0.3</span>, vtweight=<span class="number">0.7</span></span>):</span><br><span class="line">    tksim   = <span class="variable language_">self</span>.token_similarity(atks, btkss)      <span class="comment"># 关键词(BM25风格)相似度</span></span><br><span class="line">    vtsim   = cosine_similarity(avec, bvecs)           <span class="comment"># 向量余弦相似度</span></span><br><span class="line">    <span class="keyword">return</span> tkweight * tksim + vtweight * vtsim</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def hybrid_similarity(self, avec, bvecs, atks, btkss, tkweight=0.3, vtweight=0.7):
+    tksim   = self.token_similarity(atks, btkss)      # 关键词(BM25风格)相似度
+    vtsim   = cosine_similarity(avec, bvecs)           # 向量余弦相似度
+    return tkweight * tksim + vtweight * vtsim
+</code></pre>
 <p>两路权重默认 <strong>30% 关键词 + 70% 向量</strong>，与 <code>vector_similarity_weight=0.6</code> 呼应（在 <code>rerank</code> 中 <code>vtweight = vector_similarity_weight</code>）。</p>
 <blockquote>
 <p><strong>知识点：为什么向量检索需要混合（Hybrid Search）</strong><br>只走向量检索，精确数字、专有名词（如「世运电路」「CAGR」）容易被语义漂移；只走关键词检索，同义改写、长问句则召回不到。混合检索让<strong>两路互相补位</strong>，用加权融合分数统一排序。<code>vector_similarity_weight</code> 是最值得调的旋钮：研报问答里术语精确度高，可保持较高的关键词权重。</p>
 </blockquote>
 <h3 id="5-2-阈值裁剪，保证「回答有据可依」"><a href="#5-2-阈值裁剪，保证「回答有据可依」" class="headerlink" title="5.2 阈值裁剪，保证「回答有据可依」"></a>5.2 阈值裁剪，保证「回答有据可依」</h3><p><code>retrieval</code> 最后按 <code>similarity</code> 阈值和 <code>page_size</code> 裁剪：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> idx:</span><br><span class="line">    <span class="keyword">if</span> sim[i] &lt; similarity_threshold:  <span class="comment"># 相似度低于阈值的直接丢弃</span></span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(ranks[<span class="string">&quot;chunks&quot;</span>]) &gt;= page_size: <span class="keyword">break</span></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">doc_aggs：按文档聚合，返回每个文档的命中片段数</span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">for i in idx:
+    if sim[i] &lt; similarity_threshold:  # 相似度低于阈值的直接丢弃
+        break
+    if len(ranks[&quot;chunks&quot;]) &gt;= page_size: break
+    ...
 
+doc_aggs：按文档聚合，返回每个文档的命中片段数
+</code></pre>
 <blockquote>
 <p><strong>知识点：召回阈值 &#x3D; 幻觉防护第一道闸</strong><br>检索不是召回越多越好。低于阈值的低相关片段拼进 prompt，反而会诱导模型「编」。设定 <code>similarity_threshold</code> 让弱召回直接不进入上下文，是 RAG 工程用「数据」而非「prompt 恐吓」来控幻觉的做法。</p>
 </blockquote>
 <hr>
 <h2 id="6-核心五：重排序-——-让检索结果更「贴题」"><a href="#6-核心五：重排序-——-让检索结果更「贴题」" class="headerlink" title="6. 核心五：重排序 —— 让检索结果更「贴题」"></a>6. 核心五：重排序 —— 让检索结果更「贴题」</h2><p>初级召回用的是快速的（近似）向量 + 关键词并查，精度一般。前 N 条里往往混着不太相关的片段。这里再用一个<strong>重排模型</strong>精排（<code>search_v2.py</code> 的 <code>rerank_by_model</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vtsim, _ = rerank_similarity(query, [rmSpace(<span class="string">&quot; &quot;</span>.join(tks)) <span class="keyword">for</span> tks <span class="keyword">in</span> ins_tw])</span><br><span class="line"><span class="keyword">return</span> tkweight * (np.array(tksim) + rank_fea) + vtweight * vtsim</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">vtsim, _ = rerank_similarity(query, [rmSpace(&quot; &quot;.join(tks)) for tks in ins_tw])
+return tkweight * (np.array(tksim) + rank_fea) + vtweight * vtsim
+</code></pre>
 <p><code>rerank_similarity</code>（<code>model.py:45</code>）基于 <strong>llama-index 的 DashScopeRerank</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">rerank_similarity</span>(<span class="params">query, texts</span>):</span><br><span class="line">    nodes = [NodeWithScore(node=Node(text=text), score=<span class="number">1.0</span>) <span class="keyword">for</span> text <span class="keyword">in</span> texts]</span><br><span class="line">    dashscope_rerank = DashScopeRerank(top_n=<span class="built_in">len</span>(texts), api_key=api_key)</span><br><span class="line">    results = dashscope_rerank.postprocess_nodes(nodes, query_str=query)</span><br><span class="line">    scores = np.array([res.score <span class="keyword">for</span> res <span class="keyword">in</span> results])</span><br><span class="line">    <span class="keyword">return</span> scores, <span class="literal">None</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def rerank_similarity(query, texts):
+    nodes = [NodeWithScore(node=Node(text=text), score=1.0) for text in texts]
+    dashscope_rerank = DashScopeRerank(top_n=len(texts), api_key=api_key)
+    results = dashscope_rerank.postprocess_nodes(nodes, query_str=query)
+    scores = np.array([res.score for res in results])
+    return scores, None
+</code></pre>
 <blockquote>
 <p><strong>知识点：召回(Recall) vs 精排(Rerank)</strong><br>「召回要广、精排要准」。第一阶段用便宜的向量&#x2F;关键词并查把候选从海量文档中捞出上百条，第二阶段用更强的交叉编码器（Cross-Encoder）逐条对「问题×片段」打分，只留最相关的前 N 条进 prompt。这比「直接取 top-k 向量」质量高一个量级，尤其在金融术语场景里。<strong>检索是两级架构，不是一次完成。</strong></p>
 </blockquote>
 <hr>
 <h2 id="7-核心六：RAG-生成-——-让回答「带出处」"><a href="#7-核心六：RAG-生成-——-让回答「带出处」" class="headerlink" title="7. 核心六：RAG 生成 —— 让回答「带出处」"></a>7. 核心六：RAG 生成 —— 让回答「带出处」</h2><p>检索到的片段最终要拼进 prompt，并强制模型<strong>逐句标注出处编号</strong>。这是 <code>service/core/chat.py</code> 的 <code>get_chat_completion</code> 最核心的工程设定。</p>
-<h3 id="7-1-上下文组织：双来源合并编号"><a href="#7-1-上下文组织：双来源合并编号" class="headerlink" title="7.1 上下文组织：双来源合并编号"></a>7.1 上下文组织：双来源合并编号</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 知识库检索内容</span></span><br><span class="line">reference_id = <span class="number">1</span></span><br><span class="line"><span class="keyword">for</span> ref <span class="keyword">in</span> retrieved_content:</span><br><span class="line">    knowledge_base_refs.append(<span class="string">f&quot;[<span class="subst">&#123;reference_id&#125;</span>] <span class="subst">&#123;ref[<span class="string">&#x27;content_with_weight&#x27;</span>]&#125;</span>&quot;</span>)</span><br><span class="line">    reference_id += <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 当前会话快速解析文档内容（超长会截断）</span></span><br><span class="line">quick_content_paragraphs = [p <span class="keyword">for</span> p <span class="keyword">in</span> quick_parse_content.split(<span class="string">&#x27;\n&#x27;</span>) <span class="keyword">if</span> p.strip()]</span><br><span class="line">truncated_content = quick_parse_content[:<span class="number">4000</span>]   <span class="comment"># 防止 prompt 过长</span></span><br></pre></td></tr></table></figure>
+<h3 id="7-1-上下文组织：双来源合并编号"><a href="#7-1-上下文组织：双来源合并编号" class="headerlink" title="7.1 上下文组织：双来源合并编号"></a>7.1 上下文组织：双来源合并编号</h3><pre><code class="language-python"># 1. 知识库检索内容
+reference_id = 1
+for ref in retrieved_content:
+    knowledge_base_refs.append(f&quot;[&#123;reference_id&#125;] &#123;ref[&#39;content_with_weight&#39;]&#125;&quot;)
+    reference_id += 1
 
-<h3 id="7-2-引用溯源-Prompt"><a href="#7-2-引用溯源-Prompt" class="headerlink" title="7.2 引用溯源 Prompt"></a>7.2 引用溯源 Prompt</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">prompt = <span class="string">f&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">你是一个专业的智能助手，擅长基于提供的参考资料回答用户问题。</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">**回答要求：**</span></span><br><span class="line"><span class="string">1. 优先基于参考内容回答，确保答案准确可靠</span></span><br><span class="line"><span class="string">2. 在回答中，每一块内容都必须标注引用的来源，格式为：##引用编号$$。</span></span><br><span class="line"><span class="string">   例如：##1$$ 表示引用自第1条参考内容。</span></span><br><span class="line"><span class="string">3. 如果参考内容不足以完全回答问题，可以结合常识补充，但需明确区分</span></span><br><span class="line"><span class="string">4. 回答要条理清晰、语言自然流畅</span></span><br><span class="line"><span class="string">5. 如果没有相关参考内容，请诚实说明并提供一般性建议</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">**参考内容：**</span></span><br><span class="line"><span class="string"><span class="subst">&#123;formatted_references&#125;</span></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">**用户问题：**</span></span><br><span class="line"><span class="string"><span class="subst">&#123;question&#125;</span></span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+# 2. 当前会话快速解析文档内容（超长会截断）
+quick_content_paragraphs = [p for p in quick_parse_content.split(&#39;\n&#39;) if p.strip()]
+truncated_content = quick_parse_content[:4000]   # 防止 prompt 过长
+</code></pre>
+<h3 id="7-2-引用溯源-Prompt"><a href="#7-2-引用溯源-Prompt" class="headerlink" title="7.2 引用溯源 Prompt"></a>7.2 引用溯源 Prompt</h3><pre><code class="language-python">prompt = f&quot;&quot;&quot;
+你是一个专业的智能助手，擅长基于提供的参考资料回答用户问题。
 
+**回答要求：**
+1. 优先基于参考内容回答，确保答案准确可靠
+2. 在回答中，每一块内容都必须标注引用的来源，格式为：##引用编号$$。
+   例如：##1$$ 表示引用自第1条参考内容。
+3. 如果参考内容不足以完全回答问题，可以结合常识补充，但需明确区分
+4. 回答要条理清晰、语言自然流畅
+5. 如果没有相关参考内容，请诚实说明并提供一般性建议
+
+**参考内容：**
+&#123;formatted_references&#125;
+
+**用户问题：**
+&#123;question&#125;
+&quot;&quot;&quot;
+</code></pre>
 <blockquote>
 <p><strong>知识点：引用溯源（Citation）是 RAG 的生产力所在</strong><br>一行「必须标注 <code>##编号$$</code>」的约定，把「黑盒回答」变成了「可审计回答」。前端据此渲染引用卡片（文档名 + 页码 + 片段），用户能点进原文核对——这正是金融研报场景做可信问答的命门。<strong>Prompt 约定是 RAG 与「直接把文档丢给 LLM」的本质区别。</strong></p>
 </blockquote>
 <hr>
 <h2 id="8-核心七：SSE-流式输出-——-三种事件类型"><a href="#8-核心七：SSE-流式输出-——-三种事件类型" class="headerlink" title="8. 核心七：SSE 流式输出 —— 三种事件类型"></a>8. 核心七：SSE 流式输出 —— 三种事件类型</h2><p>生成用 DashScope 的流式接口 <code>stream=True</code>，模型 <code>deepseek-r1</code>，通过 <strong>SSE（Server-Sent Events）</strong> 实时推给前端。整个响应拆成三类事件，顺序清晰：</p>
-<h3 id="①-先发「文档」事件-——-一次性把检索到的引用先给前端"><a href="#①-先发「文档」事件-——-一次性把检索到的引用先给前端" class="headerlink" title="① 先发「文档」事件 —— 一次性把检索到的引用先给前端"></a>① 先发「文档」事件 —— 一次性把检索到的引用先给前端</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">message = &#123;<span class="string">&quot;documents&quot;</span>: all_documents&#125;</span><br><span class="line">json_message = json.dumps(message, ensure_ascii=<span class="literal">False</span>)</span><br><span class="line"><span class="keyword">yield</span> <span class="string">f&quot;event: message\ndata: <span class="subst">&#123;json_message&#125;</span>\n\n&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="②-再流式发「正文-思考」事件"><a href="#②-再流式发「正文-思考」事件" class="headerlink" title="② 再流式发「正文 + 思考」事件"></a>② 再流式发「正文 + 思考」事件</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> chunk <span class="keyword">in</span> completion:</span><br><span class="line">    delta = chunk.choices[<span class="number">0</span>].delta</span><br><span class="line">    <span class="keyword">if</span> delta.content:</span><br><span class="line">        model_answer += delta.content</span><br><span class="line">        <span class="keyword">yield</span> <span class="string">f&quot;event: message\ndata: <span class="subst">&#123;json.dumps(&#123;<span class="string">&#x27;role&#x27;</span>:<span class="string">&#x27;assistant&#x27;</span>,<span class="string">&#x27;content&#x27;</span>:delta.content, <span class="string">&#x27;thinking&#x27;</span>:<span class="literal">False</span>&#125;</span>)&#125;\n\n&quot;</span></span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        think += delta.reasoning_content   <span class="comment"># 思考过程单独累加，未推到前端</span></span><br></pre></td></tr></table></figure>
-
+<h3 id="①-先发「文档」事件-——-一次性把检索到的引用先给前端"><a href="#①-先发「文档」事件-——-一次性把检索到的引用先给前端" class="headerlink" title="① 先发「文档」事件 —— 一次性把检索到的引用先给前端"></a>① 先发「文档」事件 —— 一次性把检索到的引用先给前端</h3><pre><code class="language-python">message = &#123;&quot;documents&quot;: all_documents&#125;
+json_message = json.dumps(message, ensure_ascii=False)
+yield f&quot;event: message\ndata: &#123;json_message&#125;\n\n&quot;
+</code></pre>
+<h3 id="②-再流式发「正文-思考」事件"><a href="#②-再流式发「正文-思考」事件" class="headerlink" title="② 再流式发「正文 + 思考」事件"></a>② 再流式发「正文 + 思考」事件</h3><pre><code class="language-python">for chunk in completion:
+    delta = chunk.choices[0].delta
+    if delta.content:
+        model_answer += delta.content
+        yield f&quot;event: message\ndata: &#123;json.dumps(&#123;&#39;role&#39;:&#39;assistant&#39;,&#39;content&#39;:delta.content, &#39;thinking&#39;:False&#125;)&#125;\n\n&quot;
+    else:
+        think += delta.reasoning_content   # 思考过程单独累加，未推到前端
+</code></pre>
 <p>这里有个细节：<code>reasoning_content</code>（思考链）被累进 <code>think</code> 变量却不实时推送，<strong>把「思考」和「答案」解耦</strong>——用户看到的是顺滑的答案流。</p>
-<h3 id="③-完成时发「推荐问题-DONE-」"><a href="#③-完成时发「推荐问题-DONE-」" class="headerlink" title="③ 完成时发「推荐问题 + [DONE]」"></a>③ 完成时发「推荐问题 + [DONE]」</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> chunk.choices[<span class="number">0</span>].finish_reason == <span class="string">&quot;stop&quot;</span>:</span><br><span class="line">    recommended_questions = generate_recommended_questions(question, retrieved_content, session_id)</span><br><span class="line">    message = &#123;<span class="string">&quot;recommended_questions&quot;</span>: recommended_questions&#125;</span><br><span class="line">    <span class="keyword">yield</span> <span class="string">f&quot;event: message\ndata: <span class="subst">&#123;json.dumps(message)&#125;</span>\n\n&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">yield</span> <span class="string">&quot;event: end\ndata: [DONE]\n\n&quot;</span>   <span class="comment"># 结束标记</span></span><br><span class="line">    write_chat_to_db(session_id, question, model_answer, all_documents, recommended_questions, think)</span><br></pre></td></tr></table></figure>
+<h3 id="③-完成时发「推荐问题-DONE-」"><a href="#③-完成时发「推荐问题-DONE-」" class="headerlink" title="③ 完成时发「推荐问题 + [DONE]」"></a>③ 完成时发「推荐问题 + [DONE]」</h3><pre><code class="language-python">if chunk.choices[0].finish_reason == &quot;stop&quot;:
+    recommended_questions = generate_recommended_questions(question, retrieved_content, session_id)
+    message = &#123;&quot;recommended_questions&quot;: recommended_questions&#125;
+    yield f&quot;event: message\ndata: &#123;json.dumps(message)&#125;\n\n&quot;
 
+    yield &quot;event: end\ndata: [DONE]\n\n&quot;   # 结束标记
+    write_chat_to_db(session_id, question, model_answer, all_documents, recommended_questions, think)
+</code></pre>
 <blockquote>
 <p><strong>知识点：SSE 事件协议让流式对话变得可控</strong><br>不用 WebSocket 而是 SSE，前端 <code>fetch</code> + <code>ReadableStream</code> 逐行解析即可，兼容性好。把「引用文档」「生成中」「已完成」拆成不同事件，前端才能在恰当节点渲染引用卡片、思考态、推荐问题。<strong>事件即协议，是前后端协作的关键契约。</strong></p>
 </blockquote>
@@ -385,31 +491,64 @@
 <td>单会话临时问题，秒级响应</td>
 </tr>
 </tbody></table>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># quick_parse_service.py —— 轻量解析直入 Redis</span></span><br><span class="line"><span class="variable language_">self</span>.max_pages = <span class="number">4</span></span><br><span class="line"><span class="variable language_">self</span>.max_characters = <span class="number">4000</span></span><br><span class="line"><span class="variable language_">self</span>.redis_expire_seconds = <span class="number">7200</span>   <span class="comment"># 缓存 2 小时</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python"># quick_parse_service.py —— 轻量解析直入 Redis
+self.max_pages = 4
+self.max_characters = 4000
+self.redis_expire_seconds = 7200   # 缓存 2 小时
+</code></pre>
 <p>在 <code>chat.py</code> 中，两条通道的结果被<strong>合并成同一份 references</strong>（第 7.1 节），共用一套引用溯源 prompt——前端视角完全一致，后端按文档规模自动分流。</p>
 <blockquote>
 <p><strong>知识点：RAG 流水线的弹性设计</strong><br>不是所有问题都值得走完整向量检索链。对小文档、单会话场景，省去「切片&#x2F;向量化&#x2F;建索引」直接用原文生成，延迟和成本都更低。<strong>把最重的计算留给真正需要的场景</strong>，是 RAG 架构里常被忽略的成本优化。两条链共用下游生成与引用协议，是「可插拔流水线」的体现。</p>
 </blockquote>
 <hr>
 <h2 id="10-核心九：推荐问题-——-生成时的「事后抠图」"><a href="#10-核心九：推荐问题-——-生成时的「事后抠图」" class="headerlink" title="10. 核心九：推荐问题 —— 生成时的「事后抠图」"></a>10. 核心九：推荐问题 —— 生成时的「事后抠图」</h2><p>回答结束后，系统再让模型基于「当前问题 + 已引用文档名」生成 3 个推荐问题，形成追问闭环（<code>chat.py</code> 的 <code>generate_recommended_questions</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">prompt = <span class="string">f&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">你是一个智能助手，请基于用户的问题生成3个相关的推荐问题。</span></span><br><span class="line"><span class="string">用户问题：<span class="subst">&#123;user_question&#125;</span></span></span><br><span class="line"><span class="string">如果文档上下文：基于这些文档：<span class="subst">&#123;<span class="string">&#x27;, &#x27;</span>.join(document_topics)&#125;</span></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">要求：问题要具体、有价值，能引导用户更深入</span></span><br><span class="line"><span class="string">返回JSON格式：&#123;&#123;&quot;recommended_questions&quot;: [&quot;问题1&quot;, &quot;问题2&quot;, &quot;问题3&quot;]&#125;&#125;</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">prompt = f&quot;&quot;&quot;
+你是一个智能助手，请基于用户的问题生成3个相关的推荐问题。
+用户问题：&#123;user_question&#125;
+如果文档上下文：基于这些文档：&#123;&#39;, &#39;.join(document_topics)&#125;
 
+要求：问题要具体、有价值，能引导用户更深入
+返回JSON格式：&#123;&#123;"recommended_questions": ["问题1", "问题2", "问题3"]&#125;&#125;
+&quot;&quot;&quot;
+</code></pre>
 <blockquote>
 <p><strong>知识点：追问引导把单次问答做成对话</strong><br>金融研报问答往往是「一问不够，要深挖」。回答后自动补 3 个相关问题，既提升留存，又暗示系统「已理解你关心的维度」。<strong>推荐问题用 JSON 强制格式返回，是「结构化输出」在轻量生成任务里的应用。</strong></p>
 </blockquote>
 <hr>
 <h2 id="11-前端引用渲染-——-溯源闭环的最后一块"><a href="#11-前端引用渲染-——-溯源闭环的最后一块" class="headerlink" title="11. 前端引用渲染 —— 溯源闭环的最后一块"></a>11. 前端引用渲染 —— 溯源闭环的最后一块</h2><p>后端把 <code>documents</code> 字段推给前端后，<code>pages/chat/component/citations.tsx</code> 把它渲染成可交互的引用卡片：</p>
-<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;div className=&#123;styles[<span class="string">&#x27;name&#x27;</span>]&#125;&gt;&#123;item.<span class="property">document_name</span>&#125;&lt;/div&gt;</span><br><span class="line"><span class="language-xml"><span class="tag">&lt;<span class="name">div</span> <span class="attr">className</span>=<span class="string">&#123;styles[</span>&#x27;<span class="attr">desc</span>&#x27;]&#125;&gt;</span>&#123;content&#125;<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span>              &#123;<span class="comment">/* 片段原文 */</span>&#125;</span><br><span class="line">&lt;div className=&#123;styles[<span class="string">&#x27;footer-desc&#x27;</span>]&#125;&gt;页码 &#123;item.<span class="property">positions</span>?.[<span class="number">0</span>]?.[<span class="number">0</span>] ?? <span class="string">&#x27;-&#x27;</span>&#125;&lt;/div&gt;</span><br><span class="line"><span class="language-xml"><span class="tag">&lt;<span class="name">Button</span> <span class="attr">onClick</span>=<span class="string">&#123;onRead&#125;</span>&gt;</span>阅读<span class="tag">&lt;/<span class="name">Button</span>&gt;</span></span>                        &#123;<span class="comment">/* 点进原文 */</span>&#125;</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-tsx">&lt;div className=&#123;styles[&#39;name&#39;]&#125;&gt;&#123;item.document_name&#125;&lt;/div&gt;
+&lt;div className=&#123;styles[&#39;desc&#39;]&#125;&gt;&#123;content&#125;&lt;/div&gt;              &#123;/* 片段原文 */&#125;
+&lt;div className=&#123;styles[&#39;footer-desc&#39;]&#125;&gt;页码 &#123;item.positions?.[0]?.[0] ?? &#39;-&#39;&#125;&lt;/div&gt;
+&lt;Button onClick=&#123;onRead&#125;&gt;阅读&lt;/Button&gt;                        &#123;/* 点进原文 */&#125;
+</code></pre>
 <p>并带<strong>搜索 + 过滤</strong>能力，让用户在长回答里快速定位某一处引用的原文片段。</p>
 <blockquote>
 <p><strong>知识点：RAG 的可信闭环 &#x3D; 检索 → 生成 → 引用 → 可溯源</strong><br>只有前端能「回到原文」的 RAG 才是可信的 RAG。<code>positions</code>（页码）的透传让研报问答真正做到「点引用&#x2F;看原文&#x2F;核数据」，这是面向专业金融用户的硬需求。</p>
 </blockquote>
 <hr>
 <h2 id="12-架构全景回顾"><a href="#12-架构全景回顾" class="headerlink" title="12. 架构全景回顾"></a>12. 架构全景回顾</h2><p>把两条链路拼起来，整个 RAG 系统就是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────── 前端 (React, :5181) ───────────────────────────────┐</span><br><span class="line">│  流式对话 · 引用卡片 · 原文定位 · 推荐问题 · 知识库文档管理                          │</span><br><span class="line">└──────────────────────────────────────▲────────────────────────────────────────────┘</span><br><span class="line">                                       │ SSE 事件流</span><br><span class="line">┌──────────────────────────────────────┴────────────────────────────────────────────┐</span><br><span class="line">│                           RAG 引擎（FastAPI + DashScope）                          │</span><br><span class="line">│                                                                                    │</span><br><span class="line">│   【入库链】 文档 → DeepDoc解析(版面/表格/OCR) → naive切片(128token)                  │</span><br><span class="line">│             → DashScope批量向量化(1024维) → 写入 ES(kb_id + q_1024_vec)              │</span><br><span class="line">│                                                                                    │</span><br><span class="line">│   【检索链】 问题 → jieba分词 + 向量化 → 混合检索(0.6向量+0.4关键词)                  │</span><br><span class="line">│             → 阈值裁剪 → DashScope重排 → top5 chunks                                 │</span><br><span class="line">│                                                                                    │</span><br><span class="line">│   【生成链】 merge引用 + 快速解析内容 → 引用溯源Prompt(##id$$) → stream=True           │</span><br><span class="line">│             → SSE 流式 → 推荐问题 → 会话/消息落库                                    │</span><br><span class="line">│                                                                                    │</span><br><span class="line">│   【轻量链】 小文档 → Redis(2h TTL) → 合并进引用                                      │</span><br><span class="line">└──────┬──────────┬──────────┬──────────┬────────────────────────────────────────────┘</span><br><span class="line">       ▼          ▼          ▼          ▼</span><br><span class="line">   Elasticsearch  PostgreSQL   Redis   DashScope</span><br><span class="line">   (向量+关键词)  (会话/消息)   (快速解析)  (embedding+qwen+rerank)</span><br></pre></td></tr></table></figure>
-
+<pre><code>┌─────────────────────────────── 前端 (React, :5181) ───────────────────────────────┐
+│  流式对话 · 引用卡片 · 原文定位 · 推荐问题 · 知识库文档管理                          │
+└──────────────────────────────────────▲────────────────────────────────────────────┘
+                                       │ SSE 事件流
+┌──────────────────────────────────────┴────────────────────────────────────────────┐
+│                           RAG 引擎（FastAPI + DashScope）                          │
+│                                                                                    │
+│   【入库链】 文档 → DeepDoc解析(版面/表格/OCR) → naive切片(128token)                  │
+│             → DashScope批量向量化(1024维) → 写入 ES(kb_id + q_1024_vec)              │
+│                                                                                    │
+│   【检索链】 问题 → jieba分词 + 向量化 → 混合检索(0.6向量+0.4关键词)                  │
+│             → 阈值裁剪 → DashScope重排 → top5 chunks                                 │
+│                                                                                    │
+│   【生成链】 merge引用 + 快速解析内容 → 引用溯源Prompt(##id$$) → stream=True           │
+│             → SSE 流式 → 推荐问题 → 会话/消息落库                                    │
+│                                                                                    │
+│   【轻量链】 小文档 → Redis(2h TTL) → 合并进引用                                      │
+└──────┬──────────┬──────────┬──────────┬────────────────────────────────────────────┘
+       ▼          ▼          ▼          ▼
+   Elasticsearch  PostgreSQL   Redis   DashScope
+   (向量+关键词)  (会话/消息)   (快速解析)  (embedding+qwen+rerank)
+</code></pre>
 <hr>
 <h2 id="13-RAG-工程师的几点心得"><a href="#13-RAG-工程师的几点心得" class="headerlink" title="13. RAG 工程师的几点心得"></a>13. RAG 工程师的几点心得</h2><ol>
 <li><p><strong>入口决定上限，解析决定了 RAG 的「视力」。</strong> 金融研报的表格、版面、图表不处理好，向量和关键词都建立在噪声上。先在一套好的 <code>DeepDoc</code> 解析上花力气，再谈检索优化。</p>
@@ -426,8 +565,21 @@
 </li>
 </ol>
 <hr>
-<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 后端（Docker Compose 编排 ES / PostgreSQL / Redis / API）</span></span><br><span class="line"><span class="built_in">cd</span> backend</span><br><span class="line"><span class="built_in">cp</span> .env.example .<span class="built_in">env</span>          <span class="comment"># 填 DASHSCOPE_API_KEY</span></span><br><span class="line">docker compose up -d --build</span><br><span class="line">curl http://localhost:8000/docs   <span class="comment"># 等健康检查通过</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 前端</span></span><br><span class="line"><span class="built_in">cd</span> frontend</span><br><span class="line"><span class="built_in">rm</span> -rf node_modules package-lock.json</span><br><span class="line">npm install &amp;&amp; npm run dev</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 访问</span></span><br><span class="line">open http://localhost:5181/    <span class="comment"># 前端</span></span><br><span class="line">open http://localhost:8000/docs <span class="comment"># API 文档</span></span><br></pre></td></tr></table></figure>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 后端（Docker Compose 编排 ES / PostgreSQL / Redis / API）
+cd backend
+cp .env.example .env          # 填 DASHSCOPE_API_KEY
+docker compose up -d --build
+curl http://localhost:8000/docs   # 等健康检查通过
 
+# 2. 前端
+cd frontend
+rm -rf node_modules package-lock.json
+npm install &amp;&amp; npm run dev
+
+# 3. 访问
+open http://localhost:5181/    # 前端
+open http://localhost:8000/docs # API 文档
+</code></pre>
 <blockquote>
 <p>需先在 <code>backend/.env</code> 配置阿里云百炼 <code>DASHSCOPE_API_KEY</code>（模型走 OpenAI 兼容端点 <code>https://dashscope.aliyuncs.com/compatible-mode/v1</code>）。Windows 用户建议在 WSL2 中跑 Docker。</p>
 </blockquote>

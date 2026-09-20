@@ -175,42 +175,42 @@
             
             <span class="tag">
                 
-                <a href="/tags/Agent/" style="color: #00a596">
+                <a href="/tags/Agent/" style="color: #ff7d73">
                     Agent
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/LLM/" style="color: #ff7d73">
+                <a href="/tags/LLM/" style="color: #00bcd4">
                     LLM
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E7%8A%B6%E6%80%81%E6%9C%BA/" style="color: #ffa2c4">
-                    状态机
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #00a596">
+                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #ffa2c4">
                     工程实践
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93/" style="color: #00bcd4">
+                <a href="/tags/%E7%8A%B6%E6%80%81%E6%9C%BA/" style="color: #00a596">
+                    状态机
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93/" style="color: #03a9f4">
                     多智能体
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E6%8A%95%E7%A0%94/" style="color: #ff7d73">
+                <a href="/tags/%E6%8A%95%E7%A0%94/" style="color: #00bcd4">
                     投研
                 </a>
             </span>
@@ -326,8 +326,13 @@
 <p><strong>知识点：角色分治（Role Decomposition）</strong><br>把「写研究报告」这个开放式大任务，拆成规划、检索、分析、写作、审核等彼此正交的子任务，各配一个精心设计的 system prompt。好处是：<strong>每个 prompt 聚焦单一职责，行为更可控、更可测试</strong>；坏处是：Agent 之间需要<strong>清晰的交接契约</strong>——这就引出下一个知识点。</p>
 </blockquote>
 <p>所有 Agent 继承同一个基类 <code>BaseAgent</code>（<code>base.py</code>），它有固定骨架：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BaseAgent</span>(<span class="title class_ inherited__">ABC</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, name, role, llm_api_key, llm_base_url, model</span>):</span><br><span class="line">        <span class="variable language_">self</span>.client = OpenAI(api_key=..., base_url=...)   <span class="comment"># 每个 Agent 各自持有一个 LLM 客户端</span></span><br><span class="line">        ...</span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">process</span>(<span class="params">self, state: ResearchState</span>) -&gt; ResearchState: ...</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class BaseAgent(ABC):
+    def __init__(self, name, role, llm_api_key, llm_base_url, model):
+        self.client = OpenAI(api_key=..., base_url=...)   # 每个 Agent 各自持有一个 LLM 客户端
+        ...
+    @abstractmethod
+    async def process(self, state: ResearchState) -&gt; ResearchState: ...
+</code></pre>
 <p>关键点：</p>
 <ul>
 <li><strong>子类只做一件事</strong>——实现 <code>process(state)</code>，入参出参都是同一个 <code>ResearchState</code>。</li>
@@ -337,26 +342,50 @@
 <hr>
 <h2 id="3-核心二：全局「工作记忆」——-多智能体的共享大脑"><a href="#3-核心二：全局「工作记忆」——-多智能体的共享大脑" class="headerlink" title="3. 核心二：全局「工作记忆」—— 多智能体的共享大脑"></a>3. 核心二：全局「工作记忆」—— 多智能体的共享大脑</h2><p>智能体协作最大的设计难题是：<strong>每个 Agent 怎么「记住」别的 Agent 干过什么？</strong></p>
 <p>很多 Demo 的做法是把大段文本来回拼接，但这里选择了<strong>结构化共享状态</strong>：定义一份 <code>ResearchState</code>（<code>state.py</code>），用 <code>TypedDict</code> 描述，所有 Agent 读写的是<strong>同一块工作记忆</strong>。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ResearchState</span>(<span class="title class_ inherited__">TypedDict</span>):</span><br><span class="line">    query: <span class="built_in">str</span>                    <span class="comment"># 用户原始问题</span></span><br><span class="line">    outline: <span class="type">List</span>[<span class="type">Dict</span>]           <span class="comment"># 动态大纲（章节，含 section_type/status）</span></span><br><span class="line">    facts: <span class="type">List</span>[<span class="type">Dict</span>]             <span class="comment"># 结构化事实库（含 credibility_score 可信度）</span></span><br><span class="line">    data_points: <span class="type">List</span>[<span class="type">Dict</span>]       <span class="comment"># 数据点</span></span><br><span class="line">    charts: <span class="type">List</span>[<span class="type">Dict</span>]            <span class="comment"># 图表</span></span><br><span class="line">    draft_sections: <span class="type">Dict</span>[<span class="built_in">str</span>,<span class="built_in">str</span>] <span class="comment"># 分章节草稿</span></span><br><span class="line">    final_report: <span class="built_in">str</span></span><br><span class="line">    critic_feedback: <span class="type">List</span>[<span class="type">Dict</span>]   <span class="comment"># 评论家反馈</span></span><br><span class="line">    unresolved_issues: <span class="built_in">int</span></span><br><span class="line">    knowledge_graph: <span class="type">Dict</span>         <span class="comment"># &#123;nodes, edges&#125;</span></span><br><span class="line">    pending_search_queries: <span class="type">List</span>  <span class="comment"># 审核后待补搜的查询</span></span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class ResearchState(TypedDict):
+    query: str                    # 用户原始问题
+    outline: List[Dict]           # 动态大纲（章节，含 section_type/status）
+    facts: List[Dict]             # 结构化事实库（含 credibility_score 可信度）
+    data_points: List[Dict]       # 数据点
+    charts: List[Dict]            # 图表
+    draft_sections: Dict[str,str] # 分章节草稿
+    final_report: str
+    critic_feedback: List[Dict]   # 评论家反馈
+    unresolved_issues: int
+    knowledge_graph: Dict         # {nodes, edges}
+    pending_search_queries: List  # 审核后待补搜的查询
+    ...
+</code></pre>
 <h3 id="3-1-为什么「结构化」比「文本拼接」更优"><a href="#3-1-为什么「结构化」比「文本拼接」更优" class="headerlink" title="3.1 为什么「结构化」比「文本拼接」更优"></a>3.1 为什么「结构化」比「文本拼接」更优</h3><ul>
 <li><strong>事实带元数据</strong>。每条 <code>Fact</code> 带 <code>source_url</code>、<code>source_type</code>、<code>credibility_score</code>。这让后续「引用回溯」和「审核查幻觉」有据可依——报告里每个结论都能 tắtaback 到来源。</li>
 <li><strong>大纲是「可执行计划」</strong>。不是一串文字，而是带 <code>status</code>（pending&#x2F;drafted&#x2F;reviewed）的章节对象。DeepScout 只处理 <code>status == &quot;pending&quot;</code> 的章节，天然形成规划-执行闭环。</li>
 <li><strong>可序列化、可持久化</strong>。整个 state 能被存进数据库做<strong>断点续跑</strong>（见第 10 节）——这是「文本拼接」方案做不到的。</li>
 </ul>
 <h3 id="3-2-状态机：阶段驱动切换"><a href="#3-2-状态机：阶段驱动切换" class="headerlink" title="3.2 状态机：阶段驱动切换"></a>3.2 状态机：阶段驱动切换</h3><p><code>ResearchPhase</code> 是个枚举状态机（<code>state.py</code>），定义了完整生命周期：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">INIT → PLANNING → RESEARCHING → ANALYZING → WRITING</span><br><span class="line">     → REVIEWING → (RE_RESEARCHING | REVISING) → COMPLETED</span><br></pre></td></tr></table></figure>
-
+<pre><code>INIT → PLANNING → RESEARCHING → ANALYZING → WRITING
+     → REVIEWING → (RE_RESEARCHING | REVISING) → COMPLETED
+</code></pre>
 <p>每个阶段本质是一组<strong>状态不变量</strong>：比如 <code>REVIEWING</code> 阶段只能由 Critic 处理，<code>process()</code> 开头会做前置断言：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> state[<span class="string">&quot;phase&quot;</span>] != ResearchPhase.REVIEWING.value:</span><br><span class="line">    <span class="keyword">return</span> state   <span class="comment"># 不是我的阶段，我不碰</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">if state[&quot;phase&quot;] != ResearchPhase.REVIEWING.value:
+    return state   # 不是我的阶段，我不碰
+</code></pre>
 <blockquote>
 <p><strong>知识点：基于状态的 Agent 路由</strong><br>用 <code>phase</code> 字段而非 <code>if-else</code> 硬编码来驱动流程，好处是<strong>新增 Agent 只需新增一个 phase 分支</strong>，耦合度低、可扩展。</p>
 </blockquote>
 <hr>
 <h2 id="4-核心三：LangGraph-编排-vs-自研执行器"><a href="#4-核心三：LangGraph-编排-vs-自研执行器" class="headerlink" title="4. 核心三：LangGraph 编排 vs 自研执行器"></a>4. 核心三：LangGraph 编排 vs 自研执行器</h2><h3 id="4-1-为什么会用到-LangGraph"><a href="#4-1-为什么会用到-LangGraph" class="headerlink" title="4.1 为什么会用到 LangGraph"></a>4.1 为什么会用到 LangGraph</h3><p><code>DeepResearchGraph</code>（<code>graph.py</code>）一开始用 <code>LangGraph</code> 建模——把 Agent 定义为节点，把流程定义为有向图：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">workflow = StateGraph(ResearchState)          <span class="comment"># 用状态定义图</span></span><br><span class="line">workflow.add_node(<span class="string">&quot;plan&quot;</span>, <span class="variable language_">self</span>._plan_node)</span><br><span class="line">workflow.add_node(<span class="string">&quot;research&quot;</span>, <span class="variable language_">self</span>._research_node)</span><br><span class="line">...</span><br><span class="line">workflow.set_entry_point(<span class="string">&quot;plan&quot;</span>)</span><br><span class="line">workflow.add_edge(<span class="string">&quot;plan&quot;</span>, <span class="string">&quot;research&quot;</span>)</span><br><span class="line">workflow.add_edge(<span class="string">&quot;write&quot;</span>, <span class="string">&quot;review&quot;</span>)</span><br><span class="line"><span class="comment"># 关键是&quot;条件边&quot;：审核后决定下一步</span></span><br><span class="line">workflow.add_conditional_edges(<span class="string">&quot;review&quot;</span>, <span class="variable language_">self</span>._should_revise,</span><br><span class="line">    &#123;<span class="string">&quot;revise&quot;</span>: <span class="string">&quot;revise&quot;</span>, <span class="string">&quot;complete&quot;</span>: END&#125;)</span><br><span class="line">workflow.add_edge(<span class="string">&quot;revise&quot;</span>, <span class="string">&quot;review&quot;</span>)         <span class="comment"># 修订后再审，形成环</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">workflow = StateGraph(ResearchState)          # 用状态定义图
+workflow.add_node(&quot;plan&quot;, self._plan_node)
+workflow.add_node(&quot;research&quot;, self._research_node)
+...
+workflow.set_entry_point(&quot;plan&quot;)
+workflow.add_edge(&quot;plan&quot;, &quot;research&quot;)
+workflow.add_edge(&quot;write&quot;, &quot;review&quot;)
+# 关键是&quot;条件边&quot;：审核后决定下一步
+workflow.add_conditional_edges(&quot;review&quot;, self._should_revise,
+    {&quot;revise&quot;: &quot;revise&quot;, &quot;complete&quot;: END})
+workflow.add_edge(&quot;revise&quot;, &quot;review&quot;)         # 修订后再审，形成环
+</code></pre>
 <p>LangGraph 的卖点是<strong>天然支持循环、条件分支和状态注入</strong>，非常适合「计划-执行-评估-重做」这类非线形流程。</p>
 <h3 id="4-2-为什么最终没有用它做实时执行"><a href="#4-2-为什么最终没有用它做实时执行" class="headerlink" title="4.2 为什么最终没有用它做实时执行"></a>4.2 为什么最终没有用它做实时执行</h3><p>代码注释里写得非常坦诚（<code>graph.py:349</code>）：</p>
 <blockquote>
@@ -364,36 +393,75 @@
 </blockquote>
 <p>深研这活，<strong>用户最想看到的恰恰是过程</strong>——搜到了什么、写到哪一章、图表出来了没。如果研究全程：<code>思考……思考……（1 分钟后）……完成</code>，观感是灾难级的。</p>
 <p>所以最终执行走的是<strong>手写版 <code>_run_simplified</code></strong>：维护一份与 LangGraph 节点一一对应的 <code>plan/research/analyze/write/review/revise</code> 六个 <code>async</code> 步骤，再用 <code>asyncio.Queue</code> 做消息通道。LangGraph 版本保留了，但被注释掉作为备选。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">message_queue = asyncio.Queue()</span><br><span class="line">state[<span class="string">&quot;_message_queue&quot;</span>] = message_queue</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">run_agent_with_streaming</span>(<span class="params">agent</span>):</span><br><span class="line">    task = asyncio.create_task(agent.process(state))   <span class="comment"># 后台跑 Agent</span></span><br><span class="line">    <span class="keyword">while</span> <span class="keyword">not</span> task.done():</span><br><span class="line">        msg = <span class="keyword">await</span> asyncio.wait_for(message_queue.get(), timeout=<span class="number">0.5</span>)</span><br><span class="line">        <span class="keyword">yield</span> msg                                       <span class="comment"># 逐条流式推给前端</span></span><br><span class="line">    <span class="keyword">await</span> task</span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">message_queue = asyncio.Queue()
+state[&quot;_message_queue&quot;] = message_queue
 
+async def run_agent_with_streaming(agent):
+    task = asyncio.create_task(agent.process(state))   # 后台跑 Agent
+    while not task.done():
+        msg = await asyncio.wait_for(message_queue.get(), timeout=0.5)
+        yield msg                                       # 逐条流式推给前端
+    await task
+</code></pre>
 <blockquote>
 <p><strong>工程启示</strong>：<strong>图为纪律，执行为体验。</strong> LangGraph 负责表达「该走哪条路」的语义；但在需要细粒度流式、即时取消、可控重试的交互场景，手写一个轻量驱动循环往往更务实。这是「编排框架 vs 真实需求」之间很常见的一次权衡。</p>
 </blockquote>
 <hr>
 <h2 id="5-核心四：工具调用-——-让-Agent-长出「手」"><a href="#5-核心四：工具调用-——-让-Agent-长出「手」" class="headerlink" title="5. 核心四：工具调用 —— 让 Agent 长出「手」"></a>5. 核心四：工具调用 —— 让 Agent 长出「手」</h2><p>一个只会「说话」的 Agent 写不了行业报告。系统用一套 <strong>工具集</strong> 让 Agent 能真正拿到事实。这部分在 <code>react_controller.py</code> 定义了明确工具枚举：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ToolType</span>(<span class="title class_ inherited__">Enum</span>):</span><br><span class="line">    WEB_SEARCH = <span class="string">&quot;web_search&quot;</span>         <span class="comment"># 全网搜索</span></span><br><span class="line">    KNOWLEDGE_SEARCH = <span class="string">&quot;knowledge_search&quot;</span>  <span class="comment"># 本地知识库检索</span></span><br><span class="line">    TEXT2SQL = <span class="string">&quot;text2sql&quot;</span>             <span class="comment"># 自然语言查库</span></span><br><span class="line">    DATA_ANALYZER = <span class="string">&quot;data_analyzer&quot;</span>   <span class="comment"># 智能数据分析</span></span><br><span class="line">    CHART_GENERATOR = <span class="string">&quot;chart_generator&quot;</span> <span class="comment"># 图表生成</span></span><br><span class="line">    BIDDING_SEARCH = <span class="string">&quot;bidding_search&quot;</span> <span class="comment"># 招投标检索</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class ToolType(Enum):
+    WEB_SEARCH = &quot;web_search&quot;         # 全网搜索
+    KNOWLEDGE_SEARCH = &quot;knowledge_search&quot;  # 本地知识库检索
+    TEXT2SQL = &quot;text2sql&quot;             # 自然语言查库
+    DATA_ANALYZER = &quot;data_analyzer&quot;   # 智能数据分析
+    CHART_GENERATOR = &quot;chart_generator&quot; # 图表生成
+    BIDDING_SEARCH = &quot;bidding_search&quot; # 招投标检索
+</code></pre>
 <blockquote>
 <p><strong>知识点：ReAct 范式</strong><br>ReAct &#x3D; <strong>Reasoning + Acting</strong>。模型不直接给出最终答案，而是交替产出 <code>Thought</code>（我要干什么）→ <code>Action</code>（调用哪个工具、传什么参数）→ 得到 <code>Observation</code>（工具结果）→ 再 <code>Thought</code>…… 直到拿到 <code>Finish</code>。</p>
 </blockquote>
 <p><code>ReActContext</code> 负责在回合间累积上下文：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ReActContext</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, query</span>):</span><br><span class="line">        ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">add_step</span>(<span class="params">self, step</span>): ...        <span class="comment"># 记录每一步</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">add_observation</span>(<span class="params">self, obs</span>): ...  <span class="comment"># 记录工具观测</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">get_history_summary</span>(<span class="params">self, max_items=<span class="number">10</span></span>): ...  <span class="comment"># 压缩历史供提示词使用</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">get_collected_data_summary</span>(<span class="params">self, max_items=<span class="number">20</span></span>): ...  <span class="comment"># 已收集数据汇总</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class ReActContext:
+    def __init__(self, query):
+        ...
+    def add_step(self, step): ...        # 记录每一步
+    def add_observation(self, obs): ...  # 记录工具观测
+    def get_history_summary(self, max_items=10): ...  # 压缩历史供提示词使用
+    def get_collected_data_summary(self, max_items=20): ...  # 已收集数据汇总
+</code></pre>
 <p>笔记里还有一个很实在的设计：<code>_validate_and_fix_params</code>（<code>react_controller.py:454</code>）——<strong>模型生成的工具参数可能缺字段或格式不对</strong>，系统会在真正调用前做参数校验与纠偏，比如从 <code>thought</code> 里兜底抽取搜索词：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_validate_and_fix_params</span>(<span class="params">self, tool_name, params, thought, context</span>):</span><br><span class="line">    <span class="keyword">if</span> tool_name == ToolType.WEB_SEARCH.value:</span><br><span class="line">        <span class="comment"># 参数不完整就从 thought 里补一个搜索词，而不是直接报错</span></span><br><span class="line">        ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">_extract_search_query_from_thought</span>(<span class="params">self, thought, context</span>): ...</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def _validate_and_fix_params(self, tool_name, params, thought, context):
+    if tool_name == ToolType.WEB_SEARCH.value:
+        # 参数不完整就从 thought 里补一个搜索词，而不是直接报错
+        ...
+    def _extract_search_query_from_thought(self, thought, context): ...
+</code></pre>
 <blockquote>
 <p><strong>知识点：结构化输出的韧性</strong><br>大模型返回的「工具调用&#x2F;JSON」经常残缺。单靠 <code>response_format=json_object</code> 不够——工程上要用<strong>解析器 + 校验器 + 兜底抽取</strong>三层防御。这是把 Agent 从「演示」推进到「生产」的分水岭。</p>
 </blockquote>
 <h3 id="5-1-搜索缓存：省钱的关键"><a href="#5-1-搜索缓存：省钱的关键" class="headerlink" title="5.1 搜索缓存：省钱的关键"></a>5.1 搜索缓存：省钱的关键</h3><p>工具执行层（<code>tool_executor.py</code>）还做了一层<strong>结果缓存</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SEARCH_CACHE_TTL = <span class="number">3600</span>                      <span class="comment"># 缓存 1 小时</span></span><br><span class="line">_search_cache: <span class="type">Dict</span>[<span class="built_in">str</span>, <span class="type">Tuple</span>[<span class="type">List</span>, <span class="built_in">float</span>]] = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_query_hash</span>(<span class="params">query</span>): <span class="keyword">return</span> hashlib.md5(query.lower().encode()).hexdigest()</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_cached_search</span>(<span class="params">query</span>): ...            <span class="comment"># 命中缓存直接返回</span></span><br></pre></td></tr></table></figure>
+<pre><code class="language-python">SEARCH_CACHE_TTL = 3600                      # 缓存 1 小时
+_search_cache: Dict[str, Tuple[List, float]] = {}
 
+def get_query_hash(query): return hashlib.md5(query.lower().encode()).hexdigest()
+
+def get_cached_search(query): ...            # 命中缓存直接返回
+</code></pre>
 <p>多智能体多次围绕同一问题挖掘时，<strong>相同检索词直接命中缓存</strong>，省 API 配额也省延迟。</p>
 <hr>
 <h2 id="6-核心五：代码生成-Agent-自愈执行（Self-Repair）"><a href="#6-核心五：代码生成-Agent-自愈执行（Self-Repair）" class="headerlink" title="6. 核心五：代码生成 Agent + 自愈执行（Self-Repair）"></a>6. 核心五：代码生成 Agent + 自愈执行（Self-Repair）</h2><p><code>CodeWizard</code> 是本项目最有「Agent 味」的模块：它不只是让 LLM 分析，而是<strong>真的写 Python 代码去执行</strong>——算 CAGR、做同比、画 ECharts，每张图都是一段可执行代码。</p>
 <p>执行并不是「跑一次，失败算了」，而是<strong>带自愈闭环</strong>（<code>wizard.py:524</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">_execute_with_self_correction</span>(<span class="params">self, code, state, max_retries=<span class="number">3</span></span>):</span><br><span class="line">    current_code = code</span><br><span class="line">    <span class="keyword">for</span> retries <span class="keyword">in</span> <span class="built_in">range</span>(max_retries + <span class="number">1</span>):</span><br><span class="line">        result = <span class="keyword">await</span> <span class="variable language_">self</span>._execute_code(current_code)</span><br><span class="line">        <span class="keyword">if</span> result.get(<span class="string">&quot;success&quot;</span>):</span><br><span class="line">            <span class="keyword">return</span> &#123;..., <span class="string">&quot;final_code&quot;</span>: current_code&#125;   <span class="comment"># 成功即返回</span></span><br><span class="line">        <span class="comment"># 失败 → 把错误喂回 LLM 让它修</span></span><br><span class="line">        fixed = <span class="keyword">await</span> <span class="variable language_">self</span>._fix_code(current_code, result.get(<span class="string">&quot;error&quot;</span>), result.get(<span class="string">&quot;output&quot;</span>))</span><br><span class="line">        <span class="keyword">if</span> fixed <span class="keyword">and</span> fixed.get(<span class="string">&quot;fixed_code&quot;</span>):</span><br><span class="line">            current_code = fixed[<span class="string">&quot;fixed_code&quot;</span>]</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">async def _execute_with_self_correction(self, code, state, max_retries=3):
+    current_code = code
+    for retries in range(max_retries + 1):
+        result = await self._execute_code(current_code)
+        if result.get(&quot;success&quot;):
+            return {..., &quot;final_code&quot;: current_code}   # 成功即返回
+        # 失败 → 把错误喂回 LLM 让它修
+        fixed = await self._fix_code(current_code, result.get(&quot;error&quot;), result.get(&quot;output&quot;))
+        if fixed and fixed.get(&quot;fixed_code&quot;):
+            current_code = fixed[&quot;fixed_code&quot;]
+    ...
+</code></pre>
 <p>其内部 <code>_fix_code</code> 会用专门的「Python 调试专家」prompt，把<strong>错误堆栈和 stdout</strong> 喂回去要一段修复后的代码。</p>
 <blockquote>
 <p><strong>知识点：Agent 代码执行的两大难点</strong><br>① <strong>沙箱隔离</strong>：绝不直接 <code>eval</code>&#x2F;<code>exec</code> 用户或模型生成的代码，必须限制文件系统、网络、CPU 时长。② <strong>自愈循环</strong>（Self-Repair）：把报错反馈进上下文再生成一次，是「让 Agent 学会运行」的实用手段。CodeWizard 正是把这两件事都处理了的范例。</p>
@@ -401,11 +469,24 @@
 <hr>
 <h2 id="7-核心六：Reflexion-——-让-Agent-学会「打回去重做」"><a href="#7-核心六：Reflexion-——-让-Agent-学会「打回去重做」" class="headerlink" title="7. 核心六：Reflexion —— 让 Agent 学会「打回去重做」"></a>7. 核心六：Reflexion —— 让 Agent 学会「打回去重做」</h2><p>写完全部内容还远没结束。系统用一个<strong>对抗式审核</strong>闭环来保证质量，这在学术上接近 <strong>Reflexion</strong>（反思）范式。</p>
 <p><code>CriticMaster</code> 扮演<strong>永不满意的审稿人</strong>（<code>critic.py:151</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 更新质量分数 &amp; 未解决问题数</span></span><br><span class="line">state[<span class="string">&quot;quality_score&quot;</span>] = review_result[<span class="string">&quot;overall_assessment&quot;</span>][<span class="string">&quot;quality_score&quot;</span>]</span><br><span class="line">state[<span class="string">&quot;unresolved_issues&quot;</span>] = <span class="built_in">len</span>([i <span class="keyword">for</span> i <span class="keyword">in</span> issues <span class="keyword">if</span> i[<span class="string">&quot;severity&quot;</span>] <span class="keyword">in</span> [<span class="string">&quot;critical&quot;</span>, <span class="string">&quot;major&quot;</span>]])</span><br><span class="line"></span><br><span class="line"><span class="comment"># 智能路由：决定下一步</span></span><br><span class="line">verdict = review_result[<span class="string">&quot;overall_assessment&quot;</span>][<span class="string">&quot;verdict&quot;</span>]</span><br><span class="line"><span class="keyword">if</span> verdict == <span class="string">&quot;pass&quot;</span>:                      state[<span class="string">&quot;phase&quot;</span>] = COMPLETED</span><br><span class="line"><span class="keyword">elif</span> iteration &gt;= max_iterations:          state[<span class="string">&quot;phase&quot;</span>] = COMPLETED  <span class="comment"># 硬性兜底</span></span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    needs_search = <span class="variable language_">self</span>._analyze_issues_for_routing(review_result)</span><br><span class="line">    <span class="keyword">if</span> needs_search[<span class="string">&quot;should_research&quot;</span>]:    state[<span class="string">&quot;phase&quot;</span>] = RE_RESEARCHING</span><br><span class="line">    <span class="keyword">else</span>:                                  state[<span class="string">&quot;phase&quot;</span>] = REVISING</span><br><span class="line">    state[<span class="string">&quot;iteration&quot;</span>] += <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<pre><code class="language-python"># 更新质量分数 &amp; 未解决问题数
+state[&quot;quality_score&quot;] = review_result[&quot;overall_assessment&quot;][&quot;quality_score&quot;]
+state[&quot;unresolved_issues&quot;] = len([i for i in issues if i[&quot;severity&quot;] in [&quot;critical&quot;, &quot;major&quot;]])
 
+# 智能路由：决定下一步
+verdict = review_result[&quot;overall_assessment&quot;][&quot;verdict&quot;]
+if verdict == &quot;pass&quot;:                      state[&quot;phase&quot;] = COMPLETED
+elif iteration &gt;= max_iterations:          state[&quot;phase&quot;] = COMPLETED  # 硬性兜底
+else:
+    needs_search = self._analyze_issues_for_routing(review_result)
+    if needs_search[&quot;should_research&quot;]:    state[&quot;phase&quot;] = RE_RESEARCHING
+    else:                                  state[&quot;phase&quot;] = REVISING
+    state[&quot;iteration&quot;] += 1
+</code></pre>
 <p>这里的聪明之处在 <strong>按问题类型做「智能路由」</strong>（<code>critic.py:236</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">research_needed_types = &#123;<span class="string">&quot;missing_source&quot;</span>, <span class="string">&quot;incomplete&quot;</span>, <span class="string">&quot;outdated&quot;</span>&#125;  <span class="comment"># 需要重新搜索</span></span><br><span class="line"><span class="comment"># 否则 → 只需要文字修订</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">research_needed_types = {&quot;missing_source&quot;, &quot;incomplete&quot;, &quot;outdated&quot;}  # 需要重新搜索
+# 否则 → 只需要文字修订
+</code></pre>
 <ul>
 <li>问题类型是 <code>missing_source</code> &#x2F; <code>incomplete</code> &#x2F; <code>outdated</code> → 说明<strong>信息不够</strong>，回退到 <code>RE_RESEARCHING</code>，派 DeepScout 补搜。</li>
 <li>问题类型是逻辑&#x2F;表述 → <strong>信息够了但表达差</strong>，走 <code>REVISING</code> 直接让 Writer 改文字。</li>
@@ -415,25 +496,41 @@
 </blockquote>
 <hr>
 <h2 id="8-模型路由：不同-Agent-用不同模型"><a href="#8-模型路由：不同-Agent-用不同模型" class="headerlink" title="8. 模型路由：不同 Agent 用不同模型"></a>8. 模型路由：不同 Agent 用不同模型</h2><p>一个被很多人忽略、但<strong>直接影响成本与质量</strong>的设计——每个 Agent 模型独立配置（<code>llm_config.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 规划师（强但贵）：分析问题、生成大纲</span></span><br><span class="line">architect = AgentModelConfig(model=<span class="string">&quot;deepseek-v3.2&quot;</span>, temperature=<span class="number">0.7</span>, max_tokens=<span class="number">4000</span>)</span><br><span class="line"><span class="comment"># 侦察员（快且省）：搜索阶段大量调用</span></span><br><span class="line">scout     = AgentModelConfig(model=<span class="string">&quot;qwen-plus&quot;</span>,      temperature=<span class="number">0.5</span>, max_tokens=<span class="number">4000</span>)</span><br><span class="line"><span class="comment"># 写手（最强，长输出）：报告撰写，拉满 token</span></span><br><span class="line">writer    = AgentModelConfig(model=<span class="string">&quot;deepseek-v3.2&quot;</span>,  temperature=<span class="number">0.7</span>, max_tokens=<span class="number">16000</span>)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python"># 规划师（强但贵）：分析问题、生成大纲
+architect = AgentModelConfig(model=&quot;deepseek-v3.2&quot;, temperature=0.7, max_tokens=4000)
+# 侦察员（快且省）：搜索阶段大量调用
+scout     = AgentModelConfig(model=&quot;qwen-plus&quot;,      temperature=0.5, max_tokens=4000)
+# 写手（最强，长输出）：报告撰写，拉满 token
+writer    = AgentModelConfig(model=&quot;deepseek-v3.2&quot;,  temperature=0.7, max_tokens=16000)
+</code></pre>
 <blockquote>
 <p><strong>知识点：异构模型路由 &#x2F; 模型分层</strong><br>认知负载低的子任务（搜索）用便宜快速的模型，认知负载高、输出长的子任务（写作）用强模型。同时每个 Agent 可独立调节 <code>temperature</code>（规划&#x2F;写作偏高利于发散，数据提取&#x2F;代码偏低利于精确）。<strong>用「模型 × 角色 × 温度」的多维矩阵做调度，是规模化 Agent 的成本结构核心。</strong></p>
 </blockquote>
 <hr>
 <h2 id="9-实时感知：多智能体怎么把「过程」流式给用户"><a href="#9-实时感知：多智能体怎么把「过程」流式给用户" class="headerlink" title="9. 实时感知：多智能体怎么把「过程」流式给用户"></a>9. 实时感知：多智能体怎么把「过程」流式给用户</h2><p>前面提到用 <code>asyncio.Queue</code> 做消息管道。<code>BaseAgent.add_message</code> 是所有 Agent 向外界发声的统一出口：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">add_message</span>(<span class="params">self, state, event_type, content</span>):</span><br><span class="line">    message = &#123;<span class="string">&quot;type&quot;</span>: event_type, <span class="string">&quot;agent&quot;</span>: <span class="variable language_">self</span>.name,</span><br><span class="line">               <span class="string">&quot;timestamp&quot;</span>: ..., <span class="string">&quot;content&quot;</span>: content&#125;</span><br><span class="line">    state[<span class="string">&quot;messages&quot;</span>].append(message)</span><br><span class="line">    <span class="keyword">if</span> <span class="string">&quot;_message_queue&quot;</span> <span class="keyword">in</span> state <span class="keyword">and</span> state[<span class="string">&quot;_message_queue&quot;</span>]:</span><br><span class="line">        state[<span class="string">&quot;_message_queue&quot;</span>].put_nowait(message)   <span class="comment"># 立即推给 SSE</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def add_message(self, state, event_type, content):
+    message = {&quot;type&quot;: event_type, &quot;agent&quot;: self.name,
+               &quot;timestamp&quot;: ..., &quot;content&quot;: content}
+    state[&quot;messages&quot;].append(message)
+    if &quot;_message_queue&quot; in state and state[&quot;_message_queue&quot;]:
+        state[&quot;_message_queue&quot;].put_nowait(message)   # 立即推给 SSE
+</code></pre>
 <p>于是前端能收到统一的<strong>事件类型流</strong>：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">research_start → phase(planning) → thought(架构师) → research_step...</span><br><span class="line">→ phase(researching) → action(search) → research_step(completed)</span><br><span class="line">→ phase(analyzing) → code_fix → phase(writing) → review...</span><br><span class="line">→ research_complete</span><br></pre></td></tr></table></figure>
-
+<pre><code>research_start → phase(planning) → thought(架构师) → research_step...
+→ phase(researching) → action(search) → research_step(completed)
+→ phase(analyzing) → code_fix → phase(writing) → review...
+→ research_complete
+</code></pre>
 <blockquote>
 <p><strong>知识点：Agent 的可观测性 &#x2F; 事件协议</strong><br>一个健壮的多智能体系统必须<strong>把「它在想什么、在做什么」变成可观测的事件流</strong>，而不是只知道一个最终结果。定一套统一事件协议（阶段&#x2F;思考&#x2F;行动&#x2F;步骤&#x2F;反馈），前端才有东西可渲染（步骤条、搜索结果、图表、知识图谱），用户也才有「它在干活」的信任感。</p>
 </blockquote>
 <hr>
 <h2 id="10-断点续跑：状态持久化"><a href="#10-断点续跑：状态持久化" class="headerlink" title="10. 断点续跑：状态持久化"></a>10. 断点续跑：状态持久化</h2><p>深研可能很长、浏览器可能刷新。系统用一个 <code>CheckpointService</code>（<code>checkpoint_service.py</code>）在每个阶段结束保存检查点，把<strong>后端状态 + UI 状态</strong>都落库到 <code>research_checkpoints</code> 表：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>._save_checkpoint(session_id, state, ui_state)   <span class="comment"># graph.py 中每阶段调一次</span></span><br><span class="line"><span class="comment"># 恢复</span></span><br><span class="line">state = <span class="variable language_">self</span>._load_checkpoint(session_id)            <span class="comment"># resume=True 时</span></span><br><span class="line"><span class="keyword">if</span> state: <span class="keyword">yield</span> &#123;<span class="string">&quot;type&quot;</span>: <span class="string">&quot;research_resumed&quot;</span>, ...&#125;</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">self._save_checkpoint(session_id, state, ui_state)   # graph.py 中每阶段调一次
+# 恢复
+state = self._load_checkpoint(session_id)            # resume=True 时
+if state: yield {&quot;type&quot;: &quot;research_resumed&quot;, ...}
+</code></pre>
 <blockquote>
 <p><strong>知识点：Agent 的持久化（Checkpointing）</strong><br>开放式长任务一定有中断风险（会话过期、刷新、超时）。把<strong>结构化的状态</strong>做成可恢复的快照，让 Agent 能从中断处继续，而不是推倒重来——这是从「玩具」走向「可用产品」的关键能力。</p>
 </blockquote>
@@ -462,22 +559,45 @@
 <blockquote>
 <p><strong>知识点：Agent 记忆分级</strong><br>记忆分为：<strong>工作记忆</strong>（当前 window）、<strong>长期记忆</strong>（跨 session 存 Postgres + 向量）、<strong>程序记忆</strong>（技能&#x2F;工具&#x2F;策略）。本项目把长期记忆做了<strong>摘要压缩 + 向量检索</strong>，是比「全量塞上下文」更省 token 且更有关联性的做法。</p>
 </blockquote>
-<h3 id="12-2-RAG-检索（retrieval-service-py）"><a href="#12-2-RAG-检索（retrieval-service-py）" class="headerlink" title="12.2 RAG 检索（retrieval_service.py）"></a>12.2 RAG 检索（<code>retrieval_service.py</code>）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">query_vectors = generate_embedding([question])   <span class="comment"># 问题 embedding</span></span><br><span class="line">results = milvus.search(...)                     <span class="comment"># 向量检索（本地知识库）</span></span><br><span class="line"><span class="comment"># 可选：走 rerank 精排，提高命中准确率</span></span><br></pre></td></tr></table></figure>
-
+<h3 id="12-2-RAG-检索（retrieval-service-py）"><a href="#12-2-RAG-检索（retrieval-service-py）" class="headerlink" title="12.2 RAG 检索（retrieval_service.py）"></a>12.2 RAG 检索（<code>retrieval_service.py</code>）</h3><pre><code class="language-python">query_vectors = generate_embedding([question])   # 问题 embedding
+results = milvus.search(...)                     # 向量检索（本地知识库）
+# 可选：走 rerank 精排，提高命中准确率
+</code></pre>
 <p>完整链路：<strong>DocMind（可选）解析文档 → 切片 → embedding → Milvus 存向量 → 相似度召回 → rerank 精排 → 拼入上下文</strong>。这让 Agent 既能「搜全网」（web_search）也能「查私有资料」（knowledge_search）。</p>
 <hr>
 <h2 id="13-工程韧性：那些让-Agent-真正能用的「脏活」"><a href="#13-工程韧性：那些让-Agent-真正能用的「脏活」" class="headerlink" title="13. 工程韧性：那些让 Agent 真正能用的「脏活」"></a>13. 工程韧性：那些让 Agent 真正能用的「脏活」</h2><p>聊了这么多华丽的 Agent 能力，最后必须强调——<strong>真正拉开生产级与 Demo 差距的，都是不起眼的工程韧性</strong>：</p>
 <h3 id="13-1-容错-JSON-解析（base-py-111）"><a href="#13-1-容错-JSON-解析（base-py-111）" class="headerlink" title="13.1 容错 JSON 解析（base.py:111）"></a>13.1 容错 JSON 解析（<code>base.py:111</code>）</h3><p>LLM 的 JSON 输出经常出 bug，<code>parse_json_response</code> 打了一套组合拳：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">parse_json_response</span>(<span class="params">self, response</span>):</span><br><span class="line">    <span class="comment"># 1. 直接解析；2. 抽 markdown ```json 代码块</span></span><br><span class="line">    <span class="comment"># 3. 找最外层花括号；4. ast.literal_eval 兜底</span></span><br><span class="line">    <span class="comment"># 并内置修复：无引号 key、尾随逗号、无效转义（\[ \]）、注释、缺逗号...</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">def parse_json_response(self, response):
+    # 1. 直接解析；2. 抽 markdown ```json 代码块
+    # 3. 找最外层花括号；4. ast.literal_eval 兜底
+    # 并内置修复：无引号 key、尾随逗号、无效转义（\[ \]）、注释、缺逗号...
+</code></pre>
 <p>（还对 <code>code</code> 字段特殊处理：<strong>不</strong>破坏代码里的 <code>\n</code> 转义——这是很多人会踩的坑。）</p>
-<h3 id="13-2-中途取消（graph-py-397）"><a href="#13-2-中途取消（graph-py-397）" class="headerlink" title="13.2 中途取消（graph.py:397）"></a>13.2 中途取消（<code>graph.py:397</code>）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">check_cancelled</span>():</span><br><span class="line">    <span class="keyword">if</span> is_research_cancelled(session_id): <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line"><span class="comment"># 每个 Agent 启动前、执行中都检查</span></span><br><span class="line">task.cancel(); <span class="keyword">await</span> task    <span class="comment"># 用户点「取消」→ 干净地中断</span></span><br></pre></td></tr></table></figure>
-
+<h3 id="13-2-中途取消（graph-py-397）"><a href="#13-2-中途取消（graph-py-397）" class="headerlink" title="13.2 中途取消（graph.py:397）"></a>13.2 中途取消（<code>graph.py:397</code>）</h3><pre><code class="language-python">async def check_cancelled():
+    if is_research_cancelled(session_id): return True
+# 每个 Agent 启动前、执行中都检查
+task.cancel(); await task    # 用户点「取消」→ 干净地中断
+</code></pre>
 <h3 id="13-3-强制定量：防死循环"><a href="#13-3-强制定量：防死循环" class="headerlink" title="13.3 强制定量：防死循环"></a>13.3 强制定量：防死循环</h3><p><code>max_iterations</code>、<code>max_searches_per_section</code>、<code>max_charts</code>、<code>quality_threshold</code> 处处封顶，保证系统<strong>一定在有限步内终止</strong>，不会烧光预算。</p>
 <hr>
 <h2 id="14-架构全景回顾"><a href="#14-架构全景回顾" class="headerlink" title="14. 架构全景回顾"></a>14. 架构全景回顾</h2><p>把上述各线拼起来，整个 Agent 系统的架构就是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">┌────────────────────────────── 前端（实时渲染事件流） ──────────────────────────────┐</span><br><span class="line">│  步骤条 · 搜索结果 · 图表 · 知识图谱 · 流式报告 · 长期记忆                        │</span><br><span class="line">└──────────────────────────────────────────────────────────────────────────────┘</span><br><span class="line">                                      ▲ SSE 事件协议</span><br><span class="line">┌──────────────────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                           DeepResearch 多智能体状态机                          │</span><br><span class="line">│   ChiefArchitect → DeepScout → DataAnalyst+CodeWizard → LeadWriter           │</span><br><span class="line">│        └─────────── CriticMaster（Reflexion 对抗审核，智能路由返回）────────────┘│</span><br><span class="line">│        · 共享 ResearchState（工作记忆）· 检查点持久化 · 中途取消                │</span><br><span class="line">└──────┬──────────┬──────────┬──────────┬──────────┬──────────────────────────┘</span><br><span class="line">       ▼          ▼          ▼          ▼          ▼</span><br><span class="line">   ReAct 控制器  工具执行器   RAG 检索   长期记忆    APScheduler</span><br><span class="line">   (对话型Agent) (Web/SQL/   (Milvus)   (压缩+向量) (资讯/招投标定时采集)</span><br><span class="line">                  图表/Bidding)</span><br><span class="line">       ▼          ▼          ▼</span><br><span class="line">   OpenAI 兼容 LLM（qwen / deepseek，按角色路由）</span><br></pre></td></tr></table></figure>
-
+<pre><code>┌────────────────────────────── 前端（实时渲染事件流） ──────────────────────────────┐
+│  步骤条 · 搜索结果 · 图表 · 知识图谱 · 流式报告 · 长期记忆                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                      ▲ SSE 事件协议
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           DeepResearch 多智能体状态机                          │
+│   ChiefArchitect → DeepScout → DataAnalyst+CodeWizard → LeadWriter           │
+│        └─────────── CriticMaster（Reflexion 对抗审核，智能路由返回）────────────┘│
+│        · 共享 ResearchState（工作记忆）· 检查点持久化 · 中途取消                │
+└──────┬──────────┬──────────┬──────────┬──────────┬──────────────────────────┘
+       ▼          ▼          ▼          ▼          ▼
+   ReAct 控制器  工具执行器   RAG 检索   长期记忆    APScheduler
+   (对话型Agent) (Web/SQL/   (Milvus)   (压缩+向量) (资讯/招投标定时采集)
+                  图表/Bidding)
+       ▼          ▼          ▼
+   OpenAI 兼容 LLM（qwen / deepseek，按角色路由）
+</code></pre>
 <hr>
 <h2 id="15-Agent-工程师的几点心得"><a href="#15-Agent-工程师的几点心得" class="headerlink" title="15. Agent 工程师的几点心得"></a>15. Agent 工程师的几点心得</h2><ol>
 <li><strong>先定契约，再谈 Agent。</strong> 六个 Agent 能协作，靠的不是聪明，而是 <code>ResearchState</code> 这份结构化契约。<strong>先画好 Agent 之间的数据流图，再逐个实现 Agent。</strong></li>
@@ -487,8 +607,16 @@
 <li><strong>永远有终止条件。</strong> 任何反思&#x2F;重试循环都要有 <code>max_iterations</code> 这样的硬限制定量，否则灾难。</li>
 </ol>
 <hr>
-<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 中间件（Postgres / Redis / Milvus / ES…）</span></span><br><span class="line">./start-services.sh start          <span class="comment"># 或 docker compose up -d</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 后端</span></span><br><span class="line"><span class="built_in">cd</span> backend &amp;&amp; <span class="built_in">cp</span> .env.example .<span class="built_in">env</span>   <span class="comment"># 填 DASHSCOPE_API_KEY、BOCHA_API_KEY</span></span><br><span class="line">pip install -r requirements.txt &amp;&amp; python app/app_main.py</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 前端</span></span><br><span class="line"><span class="built_in">cd</span> frontend &amp;&amp; npm install --legacy-peer-deps &amp;&amp; npm run dev</span><br></pre></td></tr></table></figure>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 中间件（Postgres / Redis / Milvus / ES…）
+./start-services.sh start          # 或 docker compose up -d
 
+# 2. 后端
+cd backend &amp;&amp; cp .env.example .env   # 填 DASHSCOPE_API_KEY、BOCHA_API_KEY
+pip install -r requirements.txt &amp;&amp; python app/app_main.py
+
+# 3. 前端
+cd frontend &amp;&amp; npm install --legacy-peer-deps &amp;&amp; npm run dev
+</code></pre>
 <p>访问 <code>http://localhost:5173</code>，登录后给这六位「虚拟专家」派个深研任务，看着团队流水线实时产出吧。</p>
 <hr>
 <p><em>本文内容均基于项目源码（<code>backend/app/service/deep_research_v2/</code> 等）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Industry-Information-Assistant">https://github.com/wjl8636/Industry-Information-Assistant</a></em> ⭐</p>

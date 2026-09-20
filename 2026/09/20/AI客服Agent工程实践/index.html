@@ -175,43 +175,15 @@
             
             <span class="tag">
                 
-                <a href="/tags/Agent/" style="color: #ff7d73">
+                <a href="/tags/Agent/" style="color: #ffa2c4">
                     Agent
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/LangGraph/" style="color: #03a9f4">
-                    LangGraph
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/RAG/" style="color: #ff7d73">
-                    RAG
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/MCP/" style="color: #00a596">
-                    MCP
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/LLM/" style="color: #ffa2c4">
+                <a href="/tags/LLM/" style="color: #00bcd4">
                     LLM
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/%E7%8A%B6%E6%80%81%E6%9C%BA/" style="color: #ff7d73">
-                    状态机
                 </a>
             </span>
             
@@ -219,6 +191,34 @@
                 
                 <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #ffa2c4">
                     工程实践
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/LangGraph/" style="color: #00bcd4">
+                    LangGraph
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/RAG/" style="color: #00a596">
+                    RAG
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/MCP/" style="color: #00bcd4">
+                    MCP
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E7%8A%B6%E6%80%81%E6%9C%BA/" style="color: #03a9f4">
+                    状态机
                 </a>
             </span>
             
@@ -288,21 +288,57 @@
 <p>其中「<strong>先分流、再选择模型自由度</strong>」的编排思想最精华，作为主线展开；最后补上工具引擎、置信度、记忆、飞轮等支线。</p>
 <hr>
 <h2 id="2-核心一：先把流程「画成一张图」，再谈让模型干活"><a href="#2-核心一：先把流程「画成一张图」，再谈让模型干活" class="headerlink" title="2. 核心一：先把流程「画成一张图」，再谈让模型干活"></a>2. 核心一：先把流程「画成一张图」，再谈让模型干活</h2><p>「Agent」不是把任务扔给一个 LLM 反复催，而是<strong>先想清楚哪条路不能走，再决定哪条路让模型自由发挥</strong>。这个系统的骨架是一张 <strong>LangGraph 图</strong>（<code>app/graph/build.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">b = StateGraph(ConversationState)</span><br><span class="line">b.add_node(<span class="string">&quot;resolve_reference&quot;</span>, nodes.resolve_reference)</span><br><span class="line">b.add_node(<span class="string">&quot;classify_intent&quot;</span>,    nodes.classify_intent)</span><br><span class="line">b.add_node(<span class="string">&quot;retrieve_knowledge&quot;</span>, nodes.retrieve_knowledge)</span><br><span class="line">b.add_node(<span class="string">&quot;confidence_check&quot;</span>,   nodes.confidence_check)</span><br><span class="line">b.add_node(<span class="string">&quot;main_agent&quot;</span>,         nodes.main_agent)</span><br><span class="line">b.add_node(<span class="string">&quot;agent_tools&quot;</span>,        nodes.agent_tools)</span><br><span class="line">b.add_node(<span class="string">&quot;complaint_reply&quot;</span>,  nodes.complaint_reply)   <span class="comment"># 投诉</span></span><br><span class="line">b.add_node(<span class="string">&quot;script_reply&quot;</span>,     nodes.script_reply)      <span class="comment"># 闲聊/其他（零模型）</span></span><br><span class="line">b.add_node(<span class="string">&quot;fallback_reply&quot;</span>,   nodes.fallback_reply)    <span class="comment"># 置信度兜底</span></span><br><span class="line">b.add_node(<span class="string">&quot;fetch_order&quot;</span>,      nodes.fetch_order)       <span class="comment"># 退款子链</span></span><br><span class="line">b.add_node(<span class="string">&quot;retrieve_policy&quot;</span>,  nodes.retrieve_policy)</span><br><span class="line">b.add_node(<span class="string">&quot;log&quot;</span>,              nodes.log_node)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">b = StateGraph(ConversationState)
+b.add_node(&quot;resolve_reference&quot;, nodes.resolve_reference)
+b.add_node(&quot;classify_intent&quot;,    nodes.classify_intent)
+b.add_node(&quot;retrieve_knowledge&quot;, nodes.retrieve_knowledge)
+b.add_node(&quot;confidence_check&quot;,   nodes.confidence_check)
+b.add_node(&quot;main_agent&quot;,         nodes.main_agent)
+b.add_node(&quot;agent_tools&quot;,        nodes.agent_tools)
+b.add_node(&quot;complaint_reply&quot;,  nodes.complaint_reply)   # 投诉
+b.add_node(&quot;script_reply&quot;,     nodes.script_reply)      # 闲聊/其他（零模型）
+b.add_node(&quot;fallback_reply&quot;,   nodes.fallback_reply)    # 置信度兜底
+b.add_node(&quot;fetch_order&quot;,      nodes.fetch_order)       # 退款子链
+b.add_node(&quot;retrieve_policy&quot;,  nodes.retrieve_policy)
+b.add_node(&quot;log&quot;,              nodes.log_node)
+</code></pre>
 <p>关键的设计在<strong>条件边</strong>上（<code>build.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">b.add_conditional_edges(<span class="string">&quot;classify_intent&quot;</span>, route_by_intent, &#123;</span><br><span class="line">    <span class="string">&quot;escalate&quot;</span>:      <span class="string">&quot;complaint_reply&quot;</span>,</span><br><span class="line">    <span class="string">&quot;fallback_script&quot;</span>:<span class="string">&quot;script_reply&quot;</span>,</span><br><span class="line">    <span class="string">&quot;knowledge&quot;</span>:     <span class="string">&quot;retrieve_knowledge&quot;</span>,</span><br><span class="line">    <span class="string">&quot;refund_flow&quot;</span>:   <span class="string">&quot;fetch_order&quot;</span>,</span><br><span class="line">    <span class="string">&quot;business&quot;</span>:      <span class="string">&quot;main_agent&quot;</span>,</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">b.add_conditional_edges(&quot;classify_intent&quot;, route_by_intent, {
+    &quot;escalate&quot;:      &quot;complaint_reply&quot;,
+    &quot;fallback_script&quot;:&quot;script_reply&quot;,
+    &quot;knowledge&quot;:     &quot;retrieve_knowledge&quot;,
+    &quot;refund_flow&quot;:   &quot;fetch_order&quot;,
+    &quot;business&quot;:      &quot;main_agent&quot;,
+})
+</code></pre>
 <blockquote>
 <p><strong>知识点：分流优于自由发挥</strong><br>投诉就该安抚+转人工，闲聊就该零模型固定话术，商品咨询就该强制检索——这类决策<strong>用代码定死，不让模型猜</strong>。模型只被放行到需要聪明的地方（主 Agent），其余路径全是确定性的。</p>
 </blockquote>
 <p>那「该定死的规则表」长什么样？在 <code>app/graph/routing.py</code>，九类意图 → 五条出口是一份写死的表，单一来源、不漂移：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">INTENT_TO_ROUTE: <span class="built_in">dict</span>[<span class="built_in">str</span>, <span class="built_in">str</span>] = &#123;</span><br><span class="line">    <span class="string">&quot;投诉&quot;</span>: <span class="string">&quot;escalate&quot;</span>,    <span class="string">&quot;闲聊&quot;</span>: <span class="string">&quot;fallback_script&quot;</span>,  <span class="string">&quot;其他&quot;</span>: <span class="string">&quot;fallback_script&quot;</span>,</span><br><span class="line">    <span class="string">&quot;商品咨询&quot;</span>: <span class="string">&quot;knowledge&quot;</span>, <span class="string">&quot;退款退货&quot;</span>: <span class="string">&quot;refund_flow&quot;</span>, <span class="string">&quot;售后&quot;</span>: <span class="string">&quot;refund_flow&quot;</span>,</span><br><span class="line">    <span class="string">&quot;人工&quot;</span>: <span class="string">&quot;business&quot;</span>,   <span class="string">&quot;物流&quot;</span>: <span class="string">&quot;business&quot;</span>,  <span class="string">&quot;订单&quot;</span>: <span class="string">&quot;business&quot;</span>,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">route_by_intent</span>(<span class="params">state</span>) -&gt; <span class="built_in">str</span>:</span><br><span class="line">    <span class="keyword">return</span> INTENT_TO_ROUTE.get(state.get(<span class="string">&quot;intent&quot;</span>, <span class="string">&quot;&quot;</span>), <span class="string">&quot;business&quot;</span>)  <span class="comment"># 未知意图保守归 agent</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">INTENT_TO_ROUTE: dict[str, str] = {
+    &quot;投诉&quot;: &quot;escalate&quot;,    &quot;闲聊&quot;: &quot;fallback_script&quot;,  &quot;其他&quot;: &quot;fallback_script&quot;,
+    &quot;商品咨询&quot;: &quot;knowledge&quot;, &quot;退款退货&quot;: &quot;refund_flow&quot;, &quot;售后&quot;: &quot;refund_flow&quot;,
+    &quot;人工&quot;: &quot;business&quot;,   &quot;物流&quot;: &quot;business&quot;,  &quot;订单&quot;: &quot;business&quot;,
+}
+def route_by_intent(state) -&gt; str:
+    return INTENT_TO_ROUTE.get(state.get(&quot;intent&quot;, &quot;&quot;), &quot;business&quot;)  # 未知意图保守归 agent
+</code></pre>
 <hr>
 <h2 id="3-核心二：共享「会话状态」——-一支团队共用的工作记忆"><a href="#3-核心二：共享「会话状态」——-一支团队共用的工作记忆" class="headerlink" title="3. 核心二：共享「会话状态」—— 一支团队共用的工作记忆"></a>3. 核心二：共享「会话状态」—— 一支团队共用的工作记忆</h2><p>让分流、检索、游戏环、兜底互相衔接，靠的不是把一段段文本传来传去，而是<strong>一份结构化状态</strong>。<code>ConversationState</code>（<code>app/graph/state.py</code>）用 <code>TypedDict</code> 描述，所有节点读写同一块状态：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ConversationState</span>(TypedDict, total=<span class="literal">False</span>):</span><br><span class="line">    messages: Annotated[<span class="built_in">list</span>[AnyMessage], add_messages]  <span class="comment"># 跨轮历史,checkpointer 续接</span></span><br><span class="line">    summary: <span class="built_in">str</span>              <span class="comment"># ch07 滚动摘要</span></span><br><span class="line">    intent: <span class="built_in">str</span>               <span class="comment"># 九类之一(ch08 增「人工」)</span></span><br><span class="line">    resolved_query: <span class="built_in">str</span>       <span class="comment"># 指代消解+改写后的完整问句</span></span><br><span class="line">    evidence: <span class="built_in">str</span>             <span class="comment"># 知识路编号证据文本</span></span><br><span class="line">    citations: <span class="built_in">list</span>           <span class="comment"># 引用 chunk(前端可点)</span></span><br><span class="line">    evidence_strong: <span class="built_in">bool</span>     <span class="comment"># 生成前证据闸信号</span></span><br><span class="line">    evidence_confidence: <span class="built_in">float</span>  <span class="comment"># ch09 四信号加权总分(0-1)</span></span><br><span class="line">    route: <span class="built_in">str</span>                <span class="comment"># knowledge|business|complaint|chitchat</span></span><br><span class="line">    steps: <span class="built_in">int</span>                <span class="comment"># ReAct 步数(停止条件)</span></span><br><span class="line">    suggested_actions: <span class="built_in">list</span>   <span class="comment"># 转人工/建工单/退款表单 等可选项</span></span><br><span class="line">    trace: Annotated[<span class="built_in">dict</span>, merge_dict]  <span class="comment"># 留痕</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">class ConversationState(TypedDict, total=False):
+    messages: Annotated[list[AnyMessage], add_messages]  # 跨轮历史,checkpointer 续接
+    summary: str              # ch07 滚动摘要
+    intent: str               # 九类之一(ch08 增「人工」)
+    resolved_query: str       # 指代消解+改写后的完整问句
+    evidence: str             # 知识路编号证据文本
+    citations: list           # 引用 chunk(前端可点)
+    evidence_strong: bool     # 生成前证据闸信号
+    evidence_confidence: float  # ch09 四信号加权总分(0-1)
+    route: str                # knowledge|business|complaint|chitchat
+    steps: int                # ReAct 步数(停止条件)
+    suggested_actions: list   # 转人工/建工单/退款表单 等可选项
+    trace: Annotated[dict, merge_dict]  # 留痕
+</code></pre>
 <h3 id="3-1-为什么「结构化」比「文本拼接」更优"><a href="#3-1-为什么「结构化」比「文本拼接」更优" class="headerlink" title="3.1 为什么「结构化」比「文本拼接」更优"></a>3.1 为什么「结构化」比「文本拼接」更优</h3><ul>
 <li><strong>意图、证据、订单是各自的字段，互不污染</strong>。<code>intent</code> 一路决定走哪条边，<code>evidence</code> 一路注入模型、<code>order_data</code> 只服务退款链——各干各的，读代码的人一眼看得懂。</li>
 <li><strong><code>trace</code> 用 reducer 累加留痕</strong>。注意这个细节（<code>state.py</code> 的 <code>merge_dict</code>）：入口每轮传 <code>trace=None</code> 清零本轮，<code>None</code> 是重置哨兵——因为 <code>merge(旧,{})</code> 清不掉，得靠 <code>None</code> 触发重置，杜绝上一轮的条件键跨轮残留。</li>
@@ -311,17 +347,30 @@
 <hr>
 <h2 id="4-核心三：RAG-的「强制检索」与生成前证据闸-——-客服正确性的地基"><a href="#4-核心三：RAG-的「强制检索」与生成前证据闸-——-客服正确性的地基" class="headerlink" title="4. 核心三：RAG 的「强制检索」与生成前证据闸 —— 客服正确性的地基"></a>4. 核心三：RAG 的「强制检索」与生成前证据闸 —— 客服正确性的地基</h2><p>客服最怕模型<strong>编造政策</strong>。这里的做法不是「配个 RAG 让它能检索」，而是「<strong>商品咨询必须走检索</strong>，且检索结果必须先过闸、闸过了才放模型作答」。</p>
 <p>知识节点 <code>retrieve_knowledge</code>（<code>app/graph/nodes.py</code>）在<strong>进 Agent 之前</strong>就把证据备好：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">hits = <span class="keyword">await</span> retrieval.search_knowledge(query, strategy=<span class="string">&quot;hybrid_rerank&quot;</span>, bm25_text=bm25_text)</span><br><span class="line">conf = compute_evidence_confidence(hits)                     <span class="comment"># 四信号置信度</span></span><br><span class="line"><span class="keyword">if</span> conf.score &lt; settings.evidence_confidence_threshold:      <span class="comment"># 证据弱 → 拒答</span></span><br><span class="line">    <span class="keyword">return</span> &#123;**base, <span class="string">&quot;evidence_strong&quot;</span>: <span class="literal">False</span>,</span><br><span class="line">            <span class="string">&quot;fallback_source&quot;</span>: <span class="string">&quot;retrieval_low_conf&quot;</span>, ...&#125;    <span class="comment"># 落低置信池</span></span><br><span class="line"><span class="comment"># 语义自评:证据够不够</span></span><br><span class="line">chk = <span class="keyword">await</span> selfcheck.check_sufficient(query, ev_texts)</span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> chk[<span class="string">&quot;useful&quot;</span>]:</span><br><span class="line">    <span class="keyword">return</span> &#123;**base, <span class="string">&quot;evidence_strong&quot;</span>: <span class="literal">False</span>, <span class="string">&quot;fallback_source&quot;</span>: <span class="string">&quot;self_check&quot;</span>, ...&#125;</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">hits = await retrieval.search_knowledge(query, strategy=&quot;hybrid_rerank&quot;, bm25_text=bm25_text)
+conf = compute_evidence_confidence(hits)                     # 四信号置信度
+if conf.score &lt; settings.evidence_confidence_threshold:      # 证据弱 → 拒答
+    return {**base, &quot;evidence_strong&quot;: False,
+            &quot;fallback_source&quot;: &quot;retrieval_low_conf&quot;, ...}    # 落低置信池
+# 语义自评:证据够不够
+chk = await selfcheck.check_sufficient(query, ev_texts)
+if not chk[&quot;useful&quot;]:
+    return {**base, &quot;evidence_strong&quot;: False, &quot;fallback_source&quot;: &quot;self_check&quot;, ...}
+</code></pre>
 <p>然后用条件边走向 <code>main_agent</code>（闸过）或 <code>fallback_reply</code>（闸拦、转人工）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">b.add_conditional_edges(<span class="string">&quot;confidence_check&quot;</span>, confidence_gate, &#123;</span><br><span class="line">    <span class="string">&quot;strong&quot;</span>: <span class="string">&quot;main_agent&quot;</span>, <span class="string">&quot;weak&quot;</span>: <span class="string">&quot;fallback_reply&quot;</span>&#125;)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">b.add_conditional_edges(&quot;confidence_check&quot;, confidence_gate, {
+    &quot;strong&quot;: &quot;main_agent&quot;, &quot;weak&quot;: &quot;fallback_reply&quot;})
+</code></pre>
 <blockquote>
 <p><strong>知识点：生成前拦，而非生成后救</strong><br>证据闸放在「检索后、进 Agent 前」，而不是最终答复上。因为编造通常发生在「模型凭记忆自由发挥」那一瞬——<strong>早点拦，比事后检测省事得多</strong>。</p>
 </blockquote>
 <h3 id="4-1-四信号置信度：不额外花钱的证据质检"><a href="#4-1-四信号置信度：不额外花钱的证据质检" class="headerlink" title="4.1 四信号置信度：不额外花钱的证据质检"></a>4.1 四信号置信度：不额外花钱的证据质检</h3><p><code>compute_evidence_confidence</code>（<code>app/core/confidence.py</code>）的妙处在于——<strong>零额外模型调用</strong>。信号全部来自检索&#x2F;精排结果，固定权重线性加权归一到 0-1：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">W_TOP1, W_VALID, W_MARGIN, W_KEY = <span class="number">0.5</span>, <span class="number">0.2</span>, <span class="number">0.2</span>, <span class="number">0.1</span></span><br><span class="line"><span class="comment"># top1_score  Top1 精排分(最强证据多强)</span></span><br><span class="line"><span class="comment"># valid_count 有效证据数(孤证还是成群)</span></span><br><span class="line"><span class="comment"># margin      Top1-Top2 分差(证据聚焦度)</span></span><br><span class="line"><span class="comment"># key_clause_hit 命中关键条款词(shipping/退货/保修…)</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">W_TOP1, W_VALID, W_MARGIN, W_KEY = 0.5, 0.2, 0.2, 0.1
+# top1_score  Top1 精排分(最强证据多强)
+# valid_count 有效证据数(孤证还是成群)
+# margin      Top1-Top2 分差(证据聚焦度)
+# key_clause_hit 命中关键条款词(shipping/退货/保修…)
+</code></pre>
 <p>阈值（<code>settings.evidence_confidence_threshold</code>）<strong>不是拍脑袋</strong>，是用评估集 <code>make calibrate-confidence</code> 跑 Youden 最优出来的，并偏保守设 0.30（宁可多转人工，不放编造，实测应拒放行率 0%）。</p>
 <hr>
 <h2 id="5-核心四：ReAct-环-——-让-Agent-长出「手」，并且知道何时停下"><a href="#5-核心四：ReAct-环-——-让-Agent-长出「手」，并且知道何时停下" class="headerlink" title="5. 核心四：ReAct 环 —— 让 Agent 长出「手」，并且知道何时停下"></a>5. 核心四：ReAct 环 —— 让 Agent 长出「手」，并且知道何时停下</h2><p>商品咨询之外，主力 Agent 走的是经典 ReAct 循环（<code>app/graph/nodes.py</code> 的 <code>main_agent</code> &#x2F; <code>agent_tools</code>）：</p>
@@ -331,45 +380,67 @@
 <li><strong>Loop</strong>：<code>should_continue</code> 决定继续还是收敛。</li>
 </ol>
 <p>图上的环（<code>build.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">b.add_conditional_edges(<span class="string">&quot;main_agent&quot;</span>, should_continue, &#123;</span><br><span class="line">    <span class="string">&quot;continue&quot;</span>: <span class="string">&quot;agent_tools&quot;</span>, <span class="string">&quot;stop&quot;</span>: <span class="string">&quot;log&quot;</span>&#125;)</span><br><span class="line">b.add_edge(<span class="string">&quot;agent_tools&quot;</span>, <span class="string">&quot;main_agent&quot;</span>)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">b.add_conditional_edges(&quot;main_agent&quot;, should_continue, {
+    &quot;continue&quot;: &quot;agent_tools&quot;, &quot;stop&quot;: &quot;log&quot;})
+b.add_edge(&quot;agent_tools&quot;, &quot;main_agent&quot;)
+</code></pre>
 <h3 id="5-1-停止条件：为什么我只用「步数」去卡"><a href="#5-1-停止条件：为什么我只用「步数」去卡" class="headerlink" title="5.1 停止条件：为什么我只用「步数」去卡"></a>5.1 停止条件：为什么我只用「步数」去卡</h3><p><code>should_continue</code>（<code>app/graph/routing.py</code>）是我刻意想拿出来讲的地方。我<strong>没有</strong>用 token 预算卡死循环，理由在代码注释里写得很直白：</p>
 <blockquote>
 <p>token 花销是另一件事——它管的是烧钱和撑爆上下文，不是死循环，阈值要按真实用量分布标定，归第 9 章的成本控制一起讲。混在这里卡，一次估偏就把工具链整条掐断，而且掐在模型<strong>已经决定调工具之后</strong>，用户只看到半句「我这就去查」。</p>
 </blockquote>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">last = state[<span class="string">&quot;messages&quot;</span>][-<span class="number">1</span>]</span><br><span class="line">has_tool_calls = <span class="built_in">isinstance</span>(last, AIMessage) <span class="keyword">and</span> <span class="built_in">bool</span>(last.tool_calls)</span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> has_tool_calls: <span class="keyword">return</span> <span class="string">&quot;stop&quot;</span>                     <span class="comment"># 无 tool_calls → 收敛</span></span><br><span class="line"><span class="keyword">if</span> state.get(<span class="string">&quot;steps&quot;</span>, <span class="number">0</span>) &gt;= settings.max_agent_steps: <span class="keyword">return</span> <span class="string">&quot;stop&quot;</span>  <span class="comment"># 步数封顶</span></span><br><span class="line"><span class="keyword">return</span> <span class="string">&quot;continue&quot;</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">last = state[&quot;messages&quot;][-1]
+has_tool_calls = isinstance(last, AIMessage) and bool(last.tool_calls)
+if not has_tool_calls: return &quot;stop&quot;                     # 无 tool_calls → 收敛
+if state.get(&quot;steps&quot;, 0) &gt;= settings.max_agent_steps: return &quot;stop&quot;  # 步数封顶
+return &quot;continue&quot;
+</code></pre>
 <blockquote>
 <p><strong>知识点：行为问题 vs 成本问题，用不同的闸</strong><br>死循环是<strong>行为问题</strong>，一步&#x3D;一次模型调用、数得清，用 <code>max_agent_steps</code> 封顶；token 是<strong>成本问题</strong>，要按真实用量分布标定，归观测报表一起看。把两类问题混在一个闸里，是最常见的翻车点。</p>
 </blockquote>
 <hr>
 <h2 id="6-核心五：统一工具引擎-——-校验-权限-超时重试-审计，一个都不能少"><a href="#6-核心五：统一工具引擎-——-校验-权限-超时重试-审计，一个都不能少" class="headerlink" title="6. 核心五：统一工具引擎 —— 校验 &#x2F; 权限 &#x2F; 超时重试 &#x2F; 审计，一个都不能少"></a>6. 核心五：统一工具引擎 —— 校验 &#x2F; 权限 &#x2F; 超时重试 &#x2F; 审计，一个都不能少</h2><p>客服工具不是「调函数返回字符串」那么简单——<code>create_ticket</code> 是写操作，<code>query_order</code> 涉及别的用户的数据。我用一套<strong>统一执行引擎</strong>（<code>app/tools/engine.py</code>），让所有工具调用都过同一道纪律严明的闸口：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">查工具 → JSON Schema 校验 → 权限门 → 执行(超时/重试) → 分诊 → 格式化 + 审计</span><br></pre></td></tr></table></figure>
-
+<pre><code>查工具 → JSON Schema 校验 → 权限门 → 执行(超时/重试) → 分诊 → 格式化 + 审计
+</code></pre>
 <h3 id="6-1-注册中心与权限门"><a href="#6-1-注册中心与权限门" class="headerlink" title="6.1 注册中心与权限门"></a>6.1 注册中心与权限门</h3><p><code>registry.py</code> 用 <code>ToolSpec</code> 描述每个工具（名字、用途、JSON Schema、权限、来源、注入参数）；内置工具启动时 <code>scan_builtin()</code> 自动登记，MCP 工具由 <code>mcp_client</code> «现问现拿» 合并进来（<code>get_all_specs()</code>）。权限我们侧「独裁」：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">WRITE_TOOLS: <span class="built_in">set</span>[<span class="built_in">str</span>] = &#123;<span class="string">&quot;create_ticket&quot;</span>&#125;     <span class="comment"># 只有建工单算写</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">permission_for</span>(<span class="params">name</span>): <span class="keyword">return</span> <span class="string">&quot;write&quot;</span> <span class="keyword">if</span> name <span class="keyword">in</span> WRITE_TOOLS <span class="keyword">else</span> <span class="string">&quot;read&quot;</span></span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">WRITE_TOOLS: set[str] = {&quot;create_ticket&quot;}     # 只有建工单算写
+def permission_for(name): return &quot;write&quot; if name in WRITE_TOOLS else &quot;read&quot;
+</code></pre>
 <h3 id="6-2-never-raises-契约"><a href="#6-2-never-raises-契约" class="headerlink" title="6.2 never-raises 契约"></a>6.2 never-raises 契约</h3><p>执行引擎最狠的设计是<strong>永不抛异常</strong>。无论参数校验拦下、权限拒绝、超时、还是真故障，一律包装成 <code>ToolRun</code> + <code>ToolMessage</code> 回灌模型——<strong>坏消息如实告诉模型，让它去向用户追问或换参数，绝不装没事</strong>（<code>engine.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ① 查工具 → 未知工具:包成失败回灌</span></span><br><span class="line"><span class="comment"># ② JSON Schema 校验:拦下不抛,错误说明回灌模型(让它修正参数重新调用)</span></span><br><span class="line"><span class="keyword">if</span> verr <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">    run = _run(<span class="literal">False</span>, <span class="string">f&quot;参数校验未通过:<span class="subst">&#123;verr&#125;</span>。请修正参数重新调用;缺少的信息请先向用户追问,不要编造。&quot;</span>, <span class="string">&quot;校验拦下&quot;</span>)</span><br><span class="line"><span class="comment"># ③ 权限门:写操作必须带确认令牌(interrupt 后由 agent_tools 传入),模型绕不过</span></span><br><span class="line"><span class="keyword">if</span> spec.permission == <span class="string">&quot;write&quot;</span> <span class="keyword">and</span> <span class="keyword">not</span> confirmed:</span><br><span class="line">    run = _run(<span class="literal">False</span>, <span class="string">f&quot;<span class="subst">&#123;name&#125;</span> 未执行:<span class="subst">&#123;note&#125;</span>&quot;</span>, <span class="string">&quot;权限拒绝&quot;</span>)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python"># ① 查工具 → 未知工具:包成失败回灌
+# ② JSON Schema 校验:拦下不抛,错误说明回灌模型(让它修正参数重新调用)
+if verr is not None:
+    run = _run(False, f&quot;参数校验未通过:{verr}。请修正参数重新调用;缺少的信息请先向用户追问,不要编造。&quot;, &quot;校验拦下&quot;)
+# ③ 权限门:写操作必须带确认令牌(interrupt 后由 agent_tools 传入),模型绕不过
+if spec.permission == &quot;write&quot; and not confirmed:
+    run = _run(False, f&quot;{name} 未执行:{note}&quot;, &quot;权限拒绝&quot;)
+</code></pre>
 <p>再看两个细到能写进案头的决策：</p>
 <ul>
 <li><strong>写操作恒不重试</strong>（<code>engine.py</code> 注释）：超时未必没执行，重复执行比失败更糟。</li>
 <li><strong>身份参数在后面盖上去</strong>：<code>user_id</code> 由引擎注入，<strong>不在模型可见的 schema 里</strong>——让模型能填 user_id，一句「我是客服主管」就可能把它改写掉（<code>engine.py:174</code>）。</li>
 </ul>
 <h3 id="6-3-审计：每次都记，失败也不反拦"><a href="#6-3-审计：每次都记，失败也不反拦" class="headerlink" title="6.3 审计：每次都记，失败也不反拦"></a>6.3 审计：每次都记，失败也不反拦</h3><p><code>_audit</code> 每次工具调用写一条落库（<code>log/app.log</code> 也留一行 <code>tool_run</code>），失败只 log、<strong>绝不反拦工具执行</strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">except</span> Exception:  <span class="comment"># 审计写入失败(不影响工具执行)</span></span><br><span class="line">    logger.exception(<span class="string">&quot;审计写入失败(不影响工具执行) tool=%s status=%s&quot;</span>, name, status)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">except Exception:  # 审计写入失败(不影响工具执行)
+    logger.exception(&quot;审计写入失败(不影响工具执行) tool=%s status=%s&quot;, name, status)
+</code></pre>
 <blockquote>
 <p><strong>知识点：Agent 可观测的审计纪律</strong><br>每次工具调用 &#x3D; 一行可 tail 的日志 + 一条落库记录（来源&#x2F;Server&#x2F;结局&#x2F;耗时）。前面讲的是「它在想什么」，这里是「它真干了什么」——排障、追责、优化都靠它。</p>
 </blockquote>
 <hr>
 <h2 id="7-核心六：写操作的「确认」（interrupt-resume）——-人机协作-防越权"><a href="#7-核心六：写操作的「确认」（interrupt-resume）——-人机协作-防越权" class="headerlink" title="7. 核心六：写操作的「确认」（interrupt&#x2F;resume）—— 人机协作 + 防越权"></a>7. 核心六：写操作的「确认」（interrupt&#x2F;resume）—— 人机协作 + 防越权</h2><p><code>create_ticket</code> 写了就生效，不能模型一决定就真建。我用 LangGraph 的 <code>interrupt</code>&#x2F;<code>resume</code> 把决策留给真人（<code>agent_tools</code>，<code>app/graph/nodes.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> ticket_calls <span class="keyword">and</span> tspec <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span> \</span><br><span class="line">        <span class="keyword">and</span> engine.validate_args(tspec, <span class="built_in">dict</span>(ticket_calls[<span class="number">0</span>].get(<span class="string">&quot;args&quot;</span>) <span class="keyword">or</span> &#123;&#125;)) <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">    first_args = ticket_calls[<span class="number">0</span>][<span class="string">&quot;args&quot;</span>]</span><br><span class="line">    decision = interrupt(&#123;<span class="string">&quot;type&quot;</span>: <span class="string">&quot;confirm_ticket&quot;</span>,</span><br><span class="line">                          <span class="string">&quot;preview&quot;</span>: &#123;<span class="string">&quot;ticket_type&quot;</span>: first_args.get(<span class="string">&quot;ticket_type&quot;</span>,<span class="string">&quot;咨询&quot;</span>),</span><br><span class="line">                                      <span class="string">&quot;description&quot;</span>: first_args.get(<span class="string">&quot;description&quot;</span>,<span class="string">&quot;&quot;</span>)&#125;&#125;)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">if ticket_calls and tspec is not None \
+        and engine.validate_args(tspec, dict(ticket_calls[0].get(&quot;args&quot;) or {})) is None:
+    first_args = ticket_calls[0][&quot;args&quot;]
+    decision = interrupt({&quot;type&quot;: &quot;confirm_ticket&quot;,
+                          &quot;preview&quot;: {&quot;ticket_type&quot;: first_args.get(&quot;ticket_type&quot;,&quot;咨询&quot;),
+                                      &quot;description&quot;: first_args.get(&quot;description&quot;,&quot;&quot;)}})
+</code></pre>
 <p>关键约束：<strong><code>interrupt</code> 之前只做纯计算</strong>（校验参数、组预览），不带副作用，所以 <code>resume</code> 重跑是安全的。退款子链的 <code>fetch_order</code> 也是同一模式——用户报了别人的单，就 <code>interrupt</code> 弹订单选择器等前端点选：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">not</span> business.owns_order(uid, <span class="built_in">str</span>(oid <span class="keyword">or</span> <span class="string">&quot;&quot;</span>)):</span><br><span class="line">    orders = business.list_user_orders(uid)      <span class="comment"># 只读,可安全重跑</span></span><br><span class="line">    oid = interrupt(&#123;<span class="string">&quot;type&quot;</span>: <span class="string">&quot;select_order&quot;</span>, <span class="string">&quot;orders&quot;</span>: orders&#125;)  <span class="comment"># resume 回填订单号</span></span><br><span class="line">data = business.order_snapshot(oid)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">while not business.owns_order(uid, str(oid or &quot;&quot;)):
+    orders = business.list_user_orders(uid)      # 只读,可安全重跑
+    oid = interrupt({&quot;type&quot;: &quot;select_order&quot;, &quot;orders&quot;: orders})  # resume 回填订单号
+data = business.order_snapshot(oid)
+</code></pre>
 <h3 id="7-1-防越权：校验放进「确定性节点」，不止放在工具里"><a href="#7-1-防越权：校验放进「确定性节点」，不止放在工具里" class="headerlink" title="7.1 防越权：校验放进「确定性节点」，不止放在工具里"></a>7.1 防越权：校验放进「确定性节点」，不止放在工具里</h3><p><code>owns_order</code> 这一道校验，我在<strong>工具内部</strong>和<strong>退款子链入口</strong>各设一道。为什么？代码注释写得很实在：</p>
 <blockquote>
 <p>退款子流程是确定性节点,不经 agent_tools,工具那道校验够不着。<br>不然退款入口就成了绕过校验的后门。</p>
@@ -389,41 +460,71 @@
 </blockquote>
 <p>所以摘要跟证据一起，走<strong>用户侧那条消息</strong>。这是「前缀缓存」这个性能优化逼出来的一个很反直觉的正确做法。</p>
 <h3 id="8-2-上下文预算：启动自检一次，不比运行时撞墙"><a href="#8-2-上下文预算：启动自检一次，不比运行时撞墙" class="headerlink" title="8.2 上下文预算：启动自检一次，不比运行时撞墙"></a>8.2 上下文预算：启动自检一次，不比运行时撞墙</h3><p><code>app/core/budget.py</code> 按「模型窗口 − 固定开销 − 单轮 ReAct 峰值」提前算好预算，<code>main.py</code> 启动时自检：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">b = budget.compute()</span><br><span class="line"><span class="keyword">if</span> b.healthy: logger.info(<span class="string">&quot;上下文预算 %s&quot;</span>, budget.describe(b))</span><br><span class="line"><span class="keyword">else</span>: logger.error(<span class="string">&quot;上下文预算不足:窗口 %s 装不下 固定开销 %s + 单轮 ReAct 峰值 %s...&quot;</span>,</span><br><span class="line">                   b.window, b.fixed, b.peak)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">b = budget.compute()
+if b.healthy: logger.info(&quot;上下文预算 %s&quot;, budget.describe(b))
+else: logger.error(&quot;上下文预算不足:窗口 %s 装不下 固定开销 %s + 单轮 ReAct 峰值 %s...&quot;,
+                   b.window, b.fixed, b.peak)
+</code></pre>
 <p>窗口按块分配（system &#x2F; 检索证据 &#x2F; 输出 &#x2F; 滑窗），装不下就<strong>报警</strong>而不是用户被卡死才发现。还有个中文细节：<code>zh_chars_per_token=1.2</code>——<code>count_tokens</code> 默认按英文 4 chars&#x2F;token 估，会把中文语料估低，这里单独校准。</p>
 <hr>
 <h2 id="9-核心八：可观测-数据飞轮-——-让-Agent「自己变聪明」"><a href="#9-核心八：可观测-数据飞轮-——-让-Agent「自己变聪明」" class="headerlink" title="9. 核心八：可观测 + 数据飞轮 —— 让 Agent「自己变聪明」"></a>9. 核心八：可观测 + 数据飞轮 —— 让 Agent「自己变聪明」</h2><h3 id="9-1-把「它在想什么」变可观测"><a href="#9-1-把「它在想什么」变可观测" class="headerlink" title="9.1 把「它在想什么」变可观测"></a>9.1 把「它在想什么」变可观测</h3><p>每一轮的 <code>intent / route / trace / resolved_query</code> 都被 <code>log_node</code> 打出来并落 MySQL（<code>app/graph/nodes.py</code>）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">logger.info(<span class="string">&quot;turn conv=%s intent=%s route=%s resolved=%r trace=%s&quot;</span>,</span><br><span class="line">            state.get(<span class="string">&quot;conversation_id&quot;</span>), state.get(<span class="string">&quot;intent&quot;</span>), state.get(<span class="string">&quot;route&quot;</span>),</span><br><span class="line">            state.get(<span class="string">&quot;resolved_query&quot;</span>), state.get(<span class="string">&quot;trace&quot;</span>, &#123;&#125;))</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">logger.info(&quot;turn conv=%s intent=%s route=%s resolved=%r trace=%s&quot;,
+            state.get(&quot;conversation_id&quot;), state.get(&quot;intent&quot;), state.get(&quot;route&quot;),
+            state.get(&quot;resolved_query&quot;), state.get(&quot;trace&quot;, {}))
+</code></pre>
 <p>配合 <strong>Langfuse 自部署</strong>（<code>make langfuse-up</code>，数据不出门），意图进 trace 的 tag，能做「按意图分堆的 token 成本账」、评估趋势可视化。</p>
 <h3 id="9-2-数据飞轮：答不上的问题，喂回知识库"><a href="#9-2-数据飞轮：答不上的问题，喂回知识库" class="headerlink" title="9.2 数据飞轮：答不上的问题，喂回知识库"></a>9.2 数据飞轮：答不上的问题，喂回知识库</h3><p>最有产品味的设计在这。每次「证据弱拒答 &#x2F; 用户差评」都落进<strong>低置信池</strong>（<code>repository.insert_low_confidence</code>），且随行存<strong>召回快照</strong>（Top3 原文+得分）给审核页看。人工在 <code>/review</code> 页审核、补标准答案后回写知识库（MySQL 双写字段 + Milvus 向量）。闭环是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">模型答不上(低置信/差评) → 落池 + 召回快照 → /review 人工审核补答</span><br><span class="line">   → 回填知识库(双写) → 下次被检索到、答对</span><br></pre></td></tr></table></figure>
-
+<pre><code>模型答不上(低置信/差评) → 落池 + 召回快照 → /review 人工审核补答
+   → 回填知识库(双写) → 下次被检索到、答对
+</code></pre>
 <blockquote>
 <p><strong>工程启示：问题不是终态，是进料。</strong><br><code>fallback_reply</code> 里对快照三态的处理尤其克制：走了检索且有召回 &#x3D; 列表；走了检索但零命中 &#x3D; <code>[]</code>（这是「真缺知识」的强信号）；没走检索 &#x3D; <code>NULL</code>。<strong>把「没走检索」和「走了但没搜到」区分开，是审核页能不能精准补缺的分水岭。</strong></p>
 </blockquote>
 <hr>
 <h2 id="10-核心九：从「通用-Agent」到「专属小模型」——-把高频贵活剥出去"><a href="#10-核心九：从「通用-Agent」到「专属小模型」——-把高频贵活剥出去" class="headerlink" title="10. 核心九：从「通用 Agent」到「专属小模型」—— 把高频贵活剥出去"></a>10. 核心九：从「通用 Agent」到「专属小模型」—— 把高频贵活剥出去</h2><p>当你发现<strong>意图&#x2F;主题识别</strong>这种高频、简单、模式固定的活，每次都让大模型跑太贵，自然会想到：<strong>用专用模型替换掉 Agent 里最贵的一段</strong>。ch10 是一条完整的 MLOps 流水线（<code>scripts/ch10/</code>）：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">捞对话池 → 清洗 → 大模型预标(黄金样例校验≥80%) → 模拟补足 → 人工抽审</span><br><span class="line"> → 80/10/10 划分 → RoBERTa-wwm-ext 全参微调 → 评估(P/R/F1+混淆矩阵+容错红线)</span><br><span class="line"> → 阈值扫描 → 导出 ONNX → 轻量推理服务 :8110</span><br></pre></td></tr></table></figure>
-
+<pre><code>捞对话池 → 清洗 → 大模型预标(黄金样例校验≥80%) → 模拟补足 → 人工抽审
+ → 80/10/10 划分 → RoBERTa-wwm-ext 全参微调 → 评估(P/R/F1+混淆矩阵+容错红线)
+ → 阈值扫描 → 导出 ONNX → 轻量推理服务 :8110
+</code></pre>
 <p>17 类目（退换货&#x2F;物流&#x2F;尺码&#x2F;发票&#x2F;质量&#x2F;运费…）的权威归并术语表是<strong>全系统唯一一份</strong>（<code>app/core/taxonomy.py</code>），数据处理、预标、训练、推理、评测全部 <code>import</code> 它，不许各自抄一份：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">TOPIC_CLASSES: <span class="built_in">tuple</span>[TopicClass, ...] = (</span><br><span class="line">    TopicClass(<span class="string">&quot;退换货&quot;</span>, <span class="string">&quot;退货、换货、退款怎么办;修归保修维修,退归这里&quot;</span>, (...), <span class="string">&quot;严&quot;</span>),</span><br><span class="line">    TopicClass(<span class="string">&quot;物流&quot;</span>, <span class="string">&quot;货走到哪了、什么时候送到;运费的钱事归运费&quot;</span>, (...), <span class="string">&quot;严&quot;</span>),</span><br><span class="line">    ...</span><br><span class="line">)</span><br><span class="line">NUM_CLASSES = <span class="built_in">len</span>(TOPIC_CLASSES)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">TOPIC_CLASSES: tuple[TopicClass, ...] = (
+    TopicClass(&quot;退换货&quot;, &quot;退货、换货、退款怎么办;修归保修维修,退归这里&quot;, (...), &quot;严&quot;),
+    TopicClass(&quot;物流&quot;, &quot;货走到哪了、什么时候送到;运费的钱事归运费&quot;, (...), &quot;严&quot;),
+    ...
+)
+NUM_CLASSES = len(TOPIC_CLASSES)
+</code></pre>
 <blockquote>
 <p><strong>知识点：Agent 的成本结构核心——模型×角色×负载</strong><br>不是所有活儿都用最贵的模型。通用 Agent + 专属小分类器，是「能力 × 成本」的最优解。认知负载低、高频的活（主题归类）交给微调小模型，认知负载高、低频率的活（复杂推理）交给大模型。</p>
 </blockquote>
 <hr>
 <h2 id="11-工程韧性：那些让-Agent-真正能用的「脏活」"><a href="#11-工程韧性：那些让-Agent-真正能用的「脏活」" class="headerlink" title="11. 工程韧性：那些让 Agent 真正能用的「脏活」"></a>11. 工程韧性：那些让 Agent 真正能用的「脏活」</h2><p>聊了一堆华丽的 Agent 能力，最后必须强调——<strong>拉开生产级与 Demo 差距的，都是不起眼的工程韧性</strong>：</p>
 <h3 id="11-1-容错的参数校验（engine-py）"><a href="#11-1-容错的参数校验（engine-py）" class="headerlink" title="11.1 容错的参数校验（engine.py）"></a>11.1 容错的参数校验（<code>engine.py</code>）</h3><p>模型给的 <code>tool_calls</code> JSON 常残缺。引擎不靠 <code>response_format</code> 一把梭，而是 <code>jsonschema</code> <code>best_match</code> 给出<strong>人类可读错误</strong>、回灌模型纠偏，并把中文 <code>ensure_ascii=False</code> 不打乱。校验器本身可能炸也不让它炸穿（MCP 工具的 schema 是外部给的、不可信）：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:   <span class="comment"># 校验器异常</span></span><br><span class="line">    run = _run(<span class="literal">False</span>, <span class="string">f&quot;工具暂时不可用:参数定义异常(<span class="subst">&#123;<span class="built_in">type</span>(e).__name__&#125;</span>)...&quot;</span>, <span class="string">&quot;失败&quot;</span>)</span><br></pre></td></tr></table></figure>
-
+<pre><code class="language-python">except Exception as e:   # 校验器异常
+    run = _run(False, f&quot;工具暂时不可用:参数定义异常({type(e).__name__})...&quot;, &quot;失败&quot;)
+</code></pre>
 <h3 id="11-2-强制定量：处处封顶，保证终止"><a href="#11-2-强制定量：处处封顶，保证终止" class="headerlink" title="11.2 强制定量：处处封顶，保证终止"></a>11.2 强制定量：处处封顶，保证终止</h3><p><code>max_agent_steps</code>、<code>tool_result_max_tokens</code>、<code>max_output_tokens</code>、<code>max_user_input_tokens</code>、<code>tool_result_max_tokens</code> 处处有上限。工具结果超长也不静默撑爆，而是在<strong>行边界</strong>截断（<code>_cap_tokens</code>，别把一条记录劈两半）。</p>
 <h3 id="11-3-中文环境的坑：UTF-8"><a href="#11-3-中文环境的坑：UTF-8" class="headerlink" title="11.3 中文环境的坑：UTF-8"></a>11.3 中文环境的坑：UTF-8</h3><p>仓库里中文 markdown&#x2F;jsonl 很多，Windows 默认 GBK 会 <code>UnicodeDecodeError</code>。所以 <code>PYTHONUTF8=1</code> 在 Makefile 和 <code>dev.sh</code> 里**、于 Python 启动前**设好——写进 <code>.env</code> 已经太晚。</p>
 <hr>
 <h2 id="12-架构全景回顾"><a href="#12-架构全景回顾" class="headerlink" title="12. 架构全景回顾"></a>12. 架构全景回顾</h2><p>把上述各线拼起来，整个客服 Agent 系统的架构就是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">┌────────────────────── 前端(FastAPI /static,多页:聊天/录入/Review/观测/主题/验收) ──────────────────────┐</span><br><span class="line">│  聊天 / kb / review / observability / topics / acceptance                                          │</span><br><span class="line">└────────────────────────────────────────────────────────────────────────────────────────────────┘</span><br><span class="line">                                      ▲ 请求 + interrupt/resume(选单/建单确认/退款表单)</span><br><span class="line">┌──────────────────────────────────────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                          LangGraph 状态机(ConversationState / checkpointer)                     │</span><br><span class="line">│   START → 消解指代 → 判意图 ─┬→ 投诉→安抚+转人工         ─┐                                      │</span><br><span class="line">│                   (确定性分流) ├→ 闲聊→零模型话术           ├→ log → MySQL 审计                  │</span><br><span class="line">│                              ├→ 商品咨询→强制检索→证据闸→主Agent(RG)                            │</span><br><span class="line">│                              └→ 退款→取单→检索政策→主Agent 判 │  └→ ReAct: 想→工具→想…→收敛    │</span><br><span class="line">│                                    ▲ 四信号置信度(证据闸)      │        └─ interrupt 确认写操作  │</span><br><span class="line">└──────┬──────────────────┬──────────────────┬────────────────┬─────────────────┬────────────────┘</span><br><span class="line">       ▼                  ▼                  ▼                ▼                 ▼</span><br><span class="line">  统一工具引擎          RAG 检索           上下文管理         观测+数据飞轮      专用分类器</span><br><span class="line">  (引擎+注册表+MCP)   (Milvus mixed+rerank) (滑窗/摘要/预算)   (Langfuse+低置信池) (RoBERTa→ONNX :8110)</span><br><span class="line">       ▼                  ▼                  ▼                ▼</span><br><span class="line">   MySQL/业务数据      MySQL/Milvus 双写    SQLite checkpoint   /review 回填知识库</span><br></pre></td></tr></table></figure>
-
+<pre><code>┌────────────────────── 前端(FastAPI /static,多页:聊天/录入/Review/观测/主题/验收) ──────────────────────┐
+│  聊天 / kb / review / observability / topics / acceptance                                          │
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                      ▲ 请求 + interrupt/resume(选单/建单确认/退款表单)
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                          LangGraph 状态机(ConversationState / checkpointer)                     │
+│   START → 消解指代 → 判意图 ─┬→ 投诉→安抚+转人工         ─┐                                      │
+│                   (确定性分流) ├→ 闲聊→零模型话术           ├→ log → MySQL 审计                  │
+│                              ├→ 商品咨询→强制检索→证据闸→主Agent(RG)                            │
+│                              └→ 退款→取单→检索政策→主Agent 判 │  └→ ReAct: 想→工具→想…→收敛    │
+│                                    ▲ 四信号置信度(证据闸)      │        └─ interrupt 确认写操作  │
+└──────┬──────────────────┬──────────────────┬────────────────┬─────────────────┬────────────────┘
+       ▼                  ▼                  ▼                ▼                 ▼
+  统一工具引擎          RAG 检索           上下文管理         观测+数据飞轮      专用分类器
+  (引擎+注册表+MCP)   (Milvus mixed+rerank) (滑窗/摘要/预算)   (Langfuse+低置信池) (RoBERTa→ONNX :8110)
+       ▼                  ▼                  ▼                ▼
+   MySQL/业务数据      MySQL/Milvus 双写    SQLite checkpoint   /review 回填知识库
+</code></pre>
 <p>三组上游（聊天&#x2F;嵌入&#x2F;重排）各自直连、模型可换（意图&#x2F;摘要是独立模型槽位），在 <code>.env</code> 配置。</p>
 <hr>
 <h2 id="13-Agent-工程师的几点心得"><a href="#13-Agent-工程师的几点心得" class="headerlink" title="13. Agent 工程师的几点心得"></a>13. Agent 工程师的几点心得</h2><ol>
@@ -435,8 +536,18 @@
 <li><strong>答不上的问题是进料，不是终态。</strong> 数据飞轮把每次拒答变成一次知识更新，Agent 才谈得上「自我进化」。</li>
 </ol>
 <hr>
-<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 依赖 + 配置</span></span><br><span class="line">uv <span class="built_in">sync</span></span><br><span class="line"><span class="built_in">cp</span> .env.example .<span class="built_in">env</span>        <span class="comment"># 填 CHAT_* / EMBED_* / RERANK_* 三组密钥</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 依赖容器(MySQL + Milvus Standalone + etcd + MinIO)+ 数据 + 知识库</span></span><br><span class="line">docker compose up -d</span><br><span class="line">make seed</span><br><span class="line">make kb-build &amp;&amp; make kb-vectorize</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 启动</span></span><br><span class="line">make dev                    <span class="comment"># 拉容器→等 Milvus→拉起 MCP(8101/8102)→应用 :8000</span></span><br></pre></td></tr></table></figure>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 依赖 + 配置
+uv sync
+cp .env.example .env        # 填 CHAT_* / EMBED_* / RERANK_* 三组密钥
 
+# 2. 依赖容器(MySQL + Milvus Standalone + etcd + MinIO)+ 数据 + 知识库
+docker compose up -d
+make seed
+make kb-build &amp;&amp; make kb-vectorize
+
+# 3. 启动
+make dev                    # 拉容器→等 Milvus→拉起 MCP(8101/8102)→应用 :8000
+</code></pre>
 <p>浏览器打开 <code>http://localhost:8000</code>，问一句「订单 1001 的物流到哪了」，看到回答上方 <code>query_order</code> + <code>query_logistics</code> 两个工具调用标记，就部署成功了。完整分步任务书（含镜像加速、端口冲突排查）在仓库 <a target="_blank" rel="noopener" href="https://github.com/wjl8636/AI-Customer-Service-Assistant/blob/main/DEPLOY.md"><code>DEPLOY.md</code></a>。</p>
 <hr>
 <p><em>本文内容均基于项目源码（<code>app/graph/</code>、<code>app/tools/</code>、<code>app/core/</code>、<code>app/kb/</code>、<code>app/config.py</code> 等）编写，力求真实准确，文件路径与关键实现均已对照核实。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/AI-Customer-Service-Assistant">https://github.com/wjl8636/AI-Customer-Service-Assistant</a></em> ⭐</p>
