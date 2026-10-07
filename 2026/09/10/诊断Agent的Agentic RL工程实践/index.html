@@ -1,0 +1,666 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>🛠️ 手把手拆解：把 Agent 的诊断能力&#34;训&#34;进小模型 —— Cold Start SFT + GRPO 的工程实践 | WJL的博客</title>
+    <meta name="author" content="WJL" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <link rel="icon" href="/images/avatar.jpg" />
+    <link rel="preconnect" href="https://s4.zstatic.net" />
+<script src="https://s4.zstatic.net/ajax/libs/vue/3.3.7/vue.global.prod.min.js"></script>
+<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.cn" />
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.cn/css2?family=Fira+Code:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap"
+/>
+<script> const mixins = {}; </script>
+
+<script src="https://polyfill.alicdn.com/v3/polyfill.min.js?features=default"></script>
+
+
+<script src="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://s4.zstatic.net/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+<link
+    rel="stylesheet"
+    href="https://s4.zstatic.net/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+/>
+<script src="/js/lib/highlight.js"></script>
+
+
+
+<script src="/js/lib/preview.js"></script>
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.css" />
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+    <div id="layout">
+        <transition name="fade">
+            <div id="loading" v-show="loading">
+                <div id="loading-circle">
+                    <h2>LOADING</h2>
+                    <p>加载过慢请开启缓存 浏览器默认开启</p>
+                    <img src="/images/loading.gif" />
+                </div>
+            </div>
+        </transition>
+        <div id="menu" :class="{ hidden: hiddenMenu, 'menu-color': menuColor}">
+    <nav id="desktop-menu">
+        <a class="title" href="/">
+            <span>WJL的博客</span>
+        </a>
+        
+        <a href="/">
+            <i class="fa-solid fa-house fa-fw"></i>
+            <span>&ensp;Home</span>
+        </a>
+        
+        <a href="/about">
+            <i class="fa-solid fa-id-card fa-fw"></i>
+            <span>&ensp;About</span>
+        </a>
+        
+        <a href="/archives">
+            <i class="fa-solid fa-box-archive fa-fw"></i>
+            <span>&ensp;Archives</span>
+        </a>
+        
+        <a href="/categories">
+            <i class="fa-solid fa-bookmark fa-fw"></i>
+            <span>&ensp;Categories</span>
+        </a>
+        
+        <a href="/tags">
+            <i class="fa-solid fa-tags fa-fw"></i>
+            <span>&ensp;Tags</span>
+        </a>
+        
+    </nav>
+    <nav id="mobile-menu">
+        <div class="title" @click="showMenuItems = !showMenuItems">
+            <i class="fa-solid fa-bars fa-fw"></i>
+            <span>&emsp;WJL的博客</span>
+        </div>
+        <transition name="slide">
+            <div class="items" v-show="showMenuItems">
+                
+                <a href="/">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-house fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Home</div>
+                    </div>
+                </a>
+                
+                <a href="/about">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-id-card fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">About</div>
+                    </div>
+                </a>
+                
+                <a href="/archives">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-box-archive fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Archives</div>
+                    </div>
+                </a>
+                
+                <a href="/categories">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-bookmark fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Categories</div>
+                    </div>
+                </a>
+                
+                <a href="/tags">
+                    <div class="item">
+                        <div style="min-width: 20px; max-width: 50px; width: 10%">
+                            <i class="fa-solid fa-tags fa-fw"></i>
+                        </div>
+                        <div style="min-width: 100px; max-width: 150%; width: 20%">Tags</div>
+                    </div>
+                </a>
+                
+            </div>
+        </transition>
+    </nav>
+</div>
+<transition name="fade">
+    <div id="menu-curtain" @click="showMenuItems = !showMenuItems" v-show="showMenuItems"></div>
+</transition>
+
+        <div id="main" :class="loading ? 'into-enter-from': 'into-enter-active'">
+            <div class="article">
+    <div>
+        <h1>🛠️ 手把手拆解：把 Agent 的诊断能力&#34;训&#34;进小模型 —— Cold Start SFT + GRPO 的工程实践</h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2026/9/10
+        </span>
+        
+        
+        <span class="tags">
+            <span class="icon">
+                <i class="fa-solid fa-tags fa-fw"></i>
+            </span>
+            
+            
+            <span class="tag">
+                
+                <a href="/tags/Agent/" style="color: #03a9f4">
+                    Agent
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #ff7d73">
+                    工程实践
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/RL/" style="color: #03a9f4">
+                    RL
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/GRPO/" style="color: #00a596">
+                    GRPO
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/SFT/" style="color: #ff7d73">
+                    SFT
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/veRL/" style="color: #00bcd4">
+                    veRL
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/Qwen/" style="color: #00a596">
+                    Qwen
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%90%8E%E8%AE%AD%E7%BB%83/" style="color: #ff7d73">
+                    后训练
+                </a>
+            </span>
+            
+        </span>
+        
+    </div>
+    
+    <div class="content" v-pre>
+        <h1 id="🛠️-手把手拆解：把-Agent-的诊断能力”训”进小模型-——-Cold-Start-SFT-GRPO-的工程实践"><a href="#🛠️-手把手拆解：把-Agent-的诊断能力”训”进小模型-——-Cold-Start-SFT-GRPO-的工程实践" class="headerlink" title="🛠️ 手把手拆解：把 Agent 的诊断能力”训”进小模型 —— Cold Start SFT + GRPO 的工程实践"></a>🛠️ 手把手拆解：把 Agent 的诊断能力”训”进小模型 —— Cold Start SFT + GRPO 的工程实践</h1><blockquote>
+<p>不再把 Agent 系统的决策底座吊死在一个外部闭源模型上，而是用开源小模型 + 后训练把它换下来、还撑得起同一套系统。本文从一名 AI Agent 开发工程师的视角，深度解析开源项目 <strong>aiops-agentic-rl</strong>（<a target="_blank" rel="noopener" href="https://github.com/wjl8636/aiops-agentic-rl">github.com&#x2F;wjl8636&#x2F;aiops-agentic-rl</a>），凡是代码里真实存在的地方，我都会给出文件路径和关键实现，希望能帮你把「Agentic RL」从概念落到工程。</p>
+</blockquote>
+<hr>
+<h2 id="0-本文你会收获什么"><a href="#0-本文你会收获什么" class="headerlink" title="0. 本文你会收获什么"></a>0. 本文你会收获什么</h2><p>这篇文章不是训练报告，而是围绕一个真实项目梳理 <strong>Agentic RL 工程的核心知识图谱</strong>。我尽量把抽象的概念（两段式后训练、reward 工程、anti-hacking、veRL 适配、数据管线……）都对应到一段真实代码，让你看完能直接用。</p>
+<p>涵盖的主题索引：</p>
+<ul>
+<li><strong>路线选择</strong>：为什么是 Cold Start SFT + GRPO 两段式，而不是 RL from scratch</li>
+<li><strong>Reward 工程</strong>：零改造复用生产 hook，三层 reward 设计</li>
+<li><strong>Anti-hacking</strong>：四类结构性防线，不是事后 patch</li>
+<li><strong>veRL 系统工程</strong>：单卡 A800 跑通 15 epoch GRPO 的”同居”问题</li>
+<li><strong>SSH 反向隧道</strong>：云 GPU 怎么桥回真实 docker 环境</li>
+<li><strong>数据管线</strong>：63 条轨迹 → 667 条样本的完整链路</li>
+<li><strong>诚实标注</strong>：每个数字都有文件级证据链</li>
+</ul>
+<hr>
+<h2 id="1-先看一眼：这个系统由什么组成"><a href="#1-先看一眼：这个系统由什么组成" class="headerlink" title="1. 先看一眼：这个系统由什么组成"></a>1. 先看一眼：这个系统由什么组成</h2><p>「aiops-agentic-rl」是上一篇文章那个 <a target="_blank" rel="noopener" href="https://github.com/wjl8636/AIopsAgent"><code>AIopsAgent</code></a> 的<strong>后训练配套项目</strong>。它要回答一个现实拷问：生产系统总不能永远依赖一个外部闭源模型吧？成本、延迟、数据边界都是问题。</p>
+<p>于是这个项目把 Qwen3.5-9B 从零训成能撑起同一套诊断系统的模型——<strong>不是拿 9B 去”超越” Opus，而是证明”开源小模型能撑同一套 Agent 系统”</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>能力线</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>两段式后训练</strong></td>
+<td>Cold Start SFT（LLaMA-Factory + LoRA）→ GRPO（veRL 0.6.0 + vLLM colocate + fsdp2）</td>
+</tr>
+<tr>
+<td><strong>Reward 工程</strong></td>
+<td>零改造复用生产 hook，三层 reward（step &#x2F; credit &#x2F; outcome）直接相加</td>
+</tr>
+<tr>
+<td><strong>Anti-hacking</strong></td>
+<td>双源覆盖门、evidence 可追溯、real-health-only、组方差降采样</td>
+</tr>
+<tr>
+<td><strong>veRL 适配层</strong></td>
+<td><code>verl_adapter/</code> 把 Agent 工具面注册成 BaseTool，SSH 反向隧道桥回真实环境</td>
+</tr>
+<tr>
+<td><strong>数据管线</strong></td>
+<td>四路合成种子 + 教师采集 + 拒绝采样 + 前缀拆分 + 双层去重</td>
+</tr>
+<tr>
+<td><strong>可复现</strong></td>
+<td>每个数字都有文件级证据链，YAML 里标 [VERIFIED] &#x2F; [ASSUMED] &#x2F; [JUDGMENT]</td>
+</tr>
+</tbody></table>
+<p>其中以 <strong>Reward 工程、Anti-hacking、veRL 系统工程</strong> 最具 Agentic RL 代表性，本文作为主线展开，最后补上数据管线与可复现。</p>
+<hr>
+<h2 id="2-核心一：路线选择-——-为什么是-Cold-Start-SFT-GRPO-两段式"><a href="#2-核心一：路线选择-——-为什么是-Cold-Start-SFT-GRPO-两段式" class="headerlink" title="2. 核心一：路线选择 —— 为什么是 Cold Start SFT + GRPO 两段式"></a>2. 核心一：路线选择 —— 为什么是 Cold Start SFT + GRPO 两段式</h2><p>一眼看过去，这个问题的表面答案是”Agentic RL 用 GRPO”。但<strong>直接 RL from scratch 是训不动的</strong>。</p>
+<p>9B 底座直接跑 Agent 场景，工具调用格式（XML 还是 JSON？参数怎么写？）和白名单命中都不成熟——rollout 里绝大多数样本根本拿不到 hook 的正向 reward，一组 6 条 rollout 全失败，group advantage 接近零向量，GRPO 训不动。这是定性论断，来源是 Cold Start SFT 阶段观测到的底座工具调用完成率极低。</p>
+<p>所以走学术界主流的<strong>单引擎两阶段</strong>路线（DeepSeek-R1、Qwen-Coder 都是这条）：</p>
+<ol>
+<li><strong>Cold Start SFT</strong>：用 Opus 在真实环境采集通过轨迹，按 tool_call 边界前缀拆分，教会小模型”工具调用格式 + 白名单命中 + 能走完整条轨迹”；</li>
+<li><strong>GRPO</strong>：在 SFT checkpoint 基础上做强化学习，学”决策质量”——什么该查、查到了什么信号、该不该下诊断。</li>
+</ol>
+<p>选 Qwen3.5-9B 有三个理由：单卡 A800-80GB 塞得下（LoRA 只加 ~200MB 训练参数）；容量足够学诊断决策（4B 换显存但 route 判定天花板明显更低）；混合注意力架构（full + linear attention）给 LoRA 覆盖提出了一个硬约束——<strong>必须覆盖全部 12 个 Linear 层 proj</strong>（<code>grpo/verl_config/aiops_grpo.yaml</code> 里的 <code>target_modules</code>）：</p>
+<pre><code class="language-yaml">target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj,
+                 in_proj_qkv, in_proj_z, in_proj_b, in_proj_a, out_proj]
+</code></pre>
+<p>只挂 qkvo 等于半个模型不训——混合注意力架构下，GatedDeltaNet 那几条 <code>in_proj_*</code> 链路不参与训练，整个线性注意力分支就冻结了。</p>
+<p>为什么不用 PPO？PPO 需要独立 critic 学价值函数，同规模 critic 多吃约 40% 显存，单卡塞不下 rollout + fsdp2 + critic 同时。GRPO 用组内相对优势 <code>A_i = (R_i - μ) / σ</code>，同 prompt 抽 6 条 candidate 天然算 baseline，省掉 critic。为什么不用 DPO？Agent 轨迹的”偏好”很难定义——“这条 5 步定位比那条 8 步好”到底好在哪一步？信号太糊，而我们的 reward 是 step-wise 的，天然适配 policy gradient。</p>
+<blockquote>
+<p><strong>知识点：Cold Start 是 Agentic RL 的必要前戏</strong><br>工具调用格式都还没学会的底座，直接上 RL 只会得到”整组失败 → advantage 塌陷”。先用 SFT 把”格式 + 白名单命中 + 完整轨迹”教会，RL 才有可学的高质量决策空间。这是 R1 &#x2F; Qwen-Coder 同款路线的工程本质。</p>
+</blockquote>
+<hr>
+<h2 id="3-核心二：Reward-工程-——-零改造复用生产-hook，是最有差异化的设计"><a href="#3-核心二：Reward-工程-——-零改造复用生产-hook，是最有差异化的设计" class="headerlink" title="3. 核心二：Reward 工程 —— 零改造复用生产 hook，是最有差异化的设计"></a>3. 核心二：Reward 工程 —— 零改造复用生产 hook，是最有差异化的设计</h2><p>Agentic RL 的 reward 常见做法都不好用：人工偏好标注成本极高，rule-based 易 hack，env-based 需要能跑真实环境。这个项目的答案是一个别处很少见的组合：<strong>env + rule，且零标注成本</strong>——真实环境用 AIops-agent 的 docker-compose，rule 部分<strong>完全复用生产 hook</strong>。</p>
+<p>这个”零改造复用”贯穿整条链路，没有为训练重写一份规则：</p>
+<ul>
+<li><strong>采集&#x2F;数据端</strong>（<code>data/cold_start/collect_trajectories.py</code>）：<code>_load_aiops_core()</code> 直接加载 AIops-agent 的 <code>config / remediation / schema / guard_diagnose_ops</code>，用包装的 <code>_make_recording_hook()</code> <strong>真实调用生产 <code>guard_diagnose_ops</code></strong>，并把判定作为 <code>hook_decision</code> 记进轨迹；</li>
+<li><strong>rollout 端</strong>（<code>verl_adapter/rollout_worker.py</code> &#x2F; <code>mock_tools.py</code>）：<code>route_through_real_hook()</code> 把每条采样工具调用送到真实的 <code>guard_diagnose_ops</code>（<code>_repo_paths.load_real_hook_modules()</code> 直接从 AIops-agent import），allow&#x2F;deny&#x2F;passthrough 原样进 <code>Step.hook_decision</code>；</li>
+<li><strong>reward 重算端</strong>（<code>grpo/verl_reward_adapter.py</code>）：重算 hook 判定时直接 import 生产 <code>agent.core.remediation.classify_command</code>——同一个纯函数，不复制逻辑。</li>
+</ul>
+<p>生产 hook 迭代加了新 deny 规则，训练 reward 立即跟着走。这让训练&#x2F;生产口径永远一致——训练时 policy 学到的”哪些命令合法”和生产部署后面对的是同一套规则。Agentic RL 领域大多数项目训练用一套 rule、生产用另一套，这个设计是稀缺的。</p>
+<p>Reward 分三层，都是直接相加、<strong>没有 mixing 系数</strong>（<code>grpo/reward_router.py</code> 的 <code>compute_trajectory_reward</code>）：</p>
+<p><strong>第一层 step_reward（每步 7 条稠密信号，<code>reward/step_reward.py</code>）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>信号</th>
+<th>幅度</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tool_call_schema_valid</td>
+<td>+0.05</td>
+<td>这步工具调用 schema 合法</td>
+</tr>
+<tr>
+<td>hook allow</td>
+<td>+0.10</td>
+<td>命令命中白名单且目标授权</td>
+</tr>
+<tr>
+<td>hook deny</td>
+<td>-0.15</td>
+<td>命中但未授权 &#x2F; 写变更被拦</td>
+</tr>
+<tr>
+<td>observation_advances_diagnosis</td>
+<td>+0.10</td>
+<td>这步覆盖到新的 signal_type</td>
+</tr>
+<tr>
+<td>repeat_no_new_info</td>
+<td>-0.15</td>
+<td>重复调用无新信息</td>
+</tr>
+<tr>
+<td>evidence_fabrication（末步）</td>
+<td>-0.50</td>
+<td>编造证据</td>
+</tr>
+<tr>
+<td>schema_fallback_unrecovered（末步）</td>
+<td>-0.20</td>
+<td>schema 兜底后仍未恢复</td>
+</tr>
+</tbody></table>
+<pre><code class="language-python">def compute_step_rewards(traj: Trajectory) -&gt; list[float]:
+    &quot;&quot;&quot;Per-step step-level reward, len(result) == len(traj.steps).
+    Each step&#39;s reward = the four genuinely-per-step signals (schema valid,
+    whitelist allow, whitelist deny, observation-advances, repeat-no-new-info);
+    the two trajectory-wide penalties (evidence fabrication, unrecovered
+    schema fallback) are added onto the LAST step only.&quot;&quot;&quot;
+    rewards: list[float] = []
+    for i, step in enumerate(traj.steps):
+        prior = traj.steps[:i]
+        r = (
+            tool_call_schema_valid_reward(step)
+            + whitelist_allow_authorized_reward(step)
+            + whitelist_deny_penalty(step)
+            + observation_advances_diagnosis_reward(step, prior)
+            + repeat_no_new_info_penalty(step)
+        )
+        ...
+</code></pre>
+<p>有两点很关键：<strong>负 reward 敢给</strong>（很多项目怕 value 塌陷不敢给负分）——evidence_fabrication 的 -0.50 显著大于任何单步正向信号（最高 +0.10），policy 一旦学会捏造证据，一次就把整条轨迹的正分吃光；以及 <code>observation_advances_diagnosis</code> <strong>只在首次覆盖新 signal_type 时才给分</strong>，policy 想刷分就得开新证据源，不能反复调同一工具刷分。</p>
+<p><strong>第二层 credit_assignment（覆盖度加权求和，不是 λ 指数衰减，<code>reward/credit_assignment.py</code>）</strong>：</p>
+<p>GRPO 是组内相对 advantage，训练早期成功率低时，λ 版 credit 只在成功轨迹给分，一组 6 条全失败就全 0、梯度塌陷。所以改成：截至当前步累计覆盖到的 distinct signal_type，按模型自己声明的 kind 差异化查权重表求和（<code>SIGNAL_WEIGHTS_BY_KIND</code>）：</p>
+<pre><code class="language-python">SIGNAL_WEIGHTS_BY_KIND = {
+    &quot;dependency&quot;: {&quot;jaeger&quot;: 1.5, &quot;logs&quot;: 1.2, &quot;prometheus&quot;: 1.0, &quot;kubectl_status&quot;: 0.8, &quot;rag_history&quot;: 0.8, &quot;git_history&quot;: 0.6},
+    &quot;resource&quot;:   {&quot;kubectl_status&quot;: 1.5, &quot;prometheus&quot;: 1.3, &quot;logs&quot;: 0.8, &quot;rag_history&quot;: 0.8, &quot;jaeger&quot;: 0.6, &quot;git_history&quot;: 0.5},
+    &quot;deploy_regression&quot;: {&quot;git_history&quot;: 1.5, &quot;logs&quot;: 1.2, &quot;kubectl_status&quot;: 1.0, &quot;prometheus&quot;: 0.8, &quot;jaeger&quot;: 0.8, &quot;rag_history&quot;: 0.8},
+    &quot;config&quot;:     {&quot;logs&quot;: 1.5, &quot;rag_history&quot;: 1.2, &quot;kubectl_status&quot;: 0.8, &quot;prometheus&quot;: 0.7, &quot;jaeger&quot;: 0.7, &quot;git_history&quot;: 0.6},
+}
+</code></pre>
+<p>覆盖度求和单调非降、成功失败都给梯度，天生适配 GRPO。关键在 <code>evidence_value_reward</code> 的<strong>边际计分</strong>——每个 signal type 只在其<strong>首次被覆盖的那一步</strong>付一次权重，后续重复覆盖记 0：</p>
+<pre><code class="language-python">def evidence_value_reward(traj, step_index) -&gt; float:
+    kind = traj.final_diagnosis.get(&quot;kind&quot;)          # 模型自己声明的 kind
+    weights = _weights_for_kind(kind)
+    new_types = _newly_covered_signal_types(traj, step_index)  # 边际增量
+    return sum((weights.get(t, 0.0) for t in new_types), 0.0)
+</code></pre>
+<p>用<strong>模型自己的 kind</strong> 而不是 ground truth 是刻意的——防止 label 泄漏进 reward，代价是 kind 声明错时 credit 会跑偏，但这个错会被 outcome 的 <code>kind_match +0.1</code> 端到端矫正。</p>
+<p><strong>第三层 outcome_reward（结构化五项 + tripwire，<code>reward/outcome_reward.py</code>）</strong>：stop_loss（60s 内真实健康检查通过 +0.5、触发 new_alert -0.3）、root_cause 三字段各 +0.1、route_match +0.2、handoff 三字段各 +0.05。</p>
+<p>outcome 层最重要的一行其实是 <strong><code>_assert_no_fix_result_leak</code> tripwire</strong>——运行时断言 final_diagnosis 和 ground_truth 里绝不出现 <code>verified / fix_result / pr_passed_ci</code> 几个键，把”误把修复 Agent 的结论接进诊断 reward”从静默 bug 变成响亮异常：</p>
+<pre><code class="language-python">_FORBIDDEN_FIX_RESULT_KEYS = (&quot;verified&quot;, &quot;fix_result&quot;, &quot;fixresult&quot;, &quot;pr_passed_ci&quot;)
+
+def _assert_no_fix_result_leak(traj) -&gt; None:
+    for bucket_name, bucket in (
+        (&quot;final_diagnosis&quot;, traj.final_diagnosis),
+        (&quot;ground_truth&quot;, traj.ground_truth),
+    ):
+        leaked = [k for k in _FORBIDDEN_FIX_RESULT_KEYS if k in bucket]
+        if leaked:
+            raise ValueError(
+                f&quot;outcome_reward: {bucket_name} contains fix-agent-result key(s) &quot;
+                f&quot;{leaked} — FixResult.verified must NEVER be used as diagnosis-agent &quot;
+                f&quot;outcome reward input (doc §7.2). Remove it before scoring.&quot;
+            )
+</code></pre>
+<p>这个边界是架构级的：训练时有人尝试把 fix_success 塞进 outcome_reward 想拿”端到端”信号，tripwire 立刻 fail。后来评测里真的观察到修复 Agent 有 PR URL fabrication——没有这个 assert，训练极大概率被带偏。</p>
+<blockquote>
+<p><strong>知识点：reward 的”口径同一”与”边界硬化”</strong><br>最省心的 reward 是从生产机制里长出来的——hook&#x2F;白名单&#x2F;schema 直接 import，训练与生产永远同一套规则。同时要用运行时断言把 reward 的读入边界硬化：哪些桶能读、哪些键绝不能出现，从”约定”变成”异常”。</p>
+</blockquote>
+<hr>
+<h2 id="4-核心三：Anti-hacking-——-四类结构性防线，不是事后-patch"><a href="#4-核心三：Anti-hacking-——-四类结构性防线，不是事后-patch" class="headerlink" title="4. 核心三：Anti-hacking —— 四类结构性防线，不是事后 patch"></a>4. 核心三：Anti-hacking —— 四类结构性防线，不是事后 patch</h2><p>Reward hacking 是 policy 找 reward 漏洞拿高分但不做事。项目预判了四类真实 hack 手法，全部做成<strong>结构性防御</strong>（从数据流向上让作弊不可能），而不是训完发现 hack 再补惩罚项（<code>reward/anti_hacking.py</code>）：</p>
+<ol>
+<li><strong>双源覆盖门（-0.2）</strong>：整条轨迹 distinct signal_type &lt; 2 就扣分，逼 policy 至少交叉验证两类证据——防”看一眼 logs 就下诊断”：</li>
+</ol>
+<pre><code class="language-python">DUAL_SOURCE_GATE_PENALTY = -0.2
+MIN_DISTINCT_SIGNAL_SOURCES = 2
+
+def dual_source_coverage_penalty(traj, ...) -&gt; float:
+    covered = traj.all_signal_types_covered()
+    if len(covered) &lt; min_distinct_sources:
+        return penalty
+    return 0.0
+</code></pre>
+<ol start="2">
+<li><strong>evidence 可追溯（-0.5）</strong>：final_diagnosis.evidence 里每条 claim 必须能在真实 observation 里做 normalize substring 匹配——防凭空编 service 名：</li>
+</ol>
+<pre><code class="language-python">def is_evidence_traceable(evidence_claim: str, observations: list[str]) -&gt; bool:
+    needle = _normalize(evidence_claim)   # 折叠空白 + 小写
+    for obs in observations:
+        if needle in _normalize(obs):
+            return True
+    return False
+</code></pre>
+<ol start="3">
+<li><strong>real-health-only</strong>：stop_loss 只读 <code>traj.post_action_health</code>（真实 kubectl&#x2F;prometheus 信号），<strong>永远不读模型自报的 remediation_detail</strong>——物理上无法 fake（<code>outcome_reward.py</code> 的 stop_loss_reward 注释里明确写着”不要加读 remediation_detail 的 fallback，那正是要防的 hack 模式”）。</li>
+<li><strong>组方差降采样</strong>：连续 5 轮组内 reward 方差 ≤ 1e-4 就降采样这个 prompt——防”整组一起躺平拿保底分”：</li>
+</ol>
+<pre><code class="language-python">DEFAULT_ZERO_VARIANCE_THRESHOLD = 1e-4
+DEFAULT_CONSECUTIVE_ROUNDS = 5
+
+def should_downsample(variance_history, threshold=..., n_consecutive=...) -&gt; bool:
+    if len(variance_history) &lt; n_consecutive:
+        return False
+    return all(v &lt;= threshold for v in variance_history[-n_consecutive:])
+</code></pre>
+<p>设计难点在<strong>提前预判 policy 会怎么”抖机灵”</strong>——比如为什么 evidence fabrication 给 -0.5 不是 -0.2：因为捏造证据是 SRE 场景不可容忍的 trust 破坏，惩罚必须显著大于”少调一个工具的机会成本”，policy 才不会赌一把。</p>
+<blockquote>
+<p><strong>知识点：结构性防 hack</strong><br>与其训完发现 hack 再补惩罚项，不如从数据流向上让作弊不可能：双源覆盖门逼交叉验证、evidence 可追溯把”编造”变成”必然失败”、real-health-only 物理隔离自报文本、组方差降采样对付躺平。每一条防线都对应一个预判的 hack 手法。</p>
+</blockquote>
+<hr>
+<h2 id="5-核心四：veRL-系统工程-——-单卡-A800-跑通-15-epoch-GRPO"><a href="#5-核心四：veRL-系统工程-——-单卡-A800-跑通-15-epoch-GRPO" class="headerlink" title="5. 核心四：veRL 系统工程 —— 单卡 A800 跑通 15 epoch GRPO"></a>5. 核心四：veRL 系统工程 —— 单卡 A800 跑通 15 epoch GRPO</h2><p>这是整个项目工程含量最密的部分。GRPO 15 epoch × 74 prompt × 6 candidate &#x3D; 6660 条 rollout，<strong>单卡 A800-80GB、wall-clock 约 12 小时</strong>。省掉 critic 只是第一步，真正的难点在于让 rollout + fsdp2 + LoRA 在单卡上”同居”：</p>
+<ul>
+<li><strong>单卡 colocate（actor+ref FSDP 与 vLLM rollout 挤同一张 GPU）是硬前提</strong>：<code>update_weights</code> 阶段 <code>load_fsdp_model_to_gpu</code> 把 CPU-offload 的 actor 权重整个搬回 GPU 会跟 vLLM 常驻显存撞车（实测卡在”还差 834MiB”这种量级），靠 <code>PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</code> + <code>fsdp_config.param_offload=True</code> + <code>gpu_memory_utilization=0.3</code> + <code>max_model_len=16384</code> 四方配合压住。</li>
+<li><strong>gpu_memory_utilization&#x3D;0.3 不是调出来的，是撞出来的</strong>——0.6 是照抄 doc 的两卡经济档算的，单卡 colocate 时 FSDP 模型一加载完 79.25GB 只剩 ~44GB，0.35 能启动 vLLM 但 update_weights 还是会 OOM 几百 MiB，降到 0.25 又让 vLLM 的 KV cache 只剩 0.88GiB 直接启动失败。三个 OOM 在不同阶段触发，不能只调一个值互相覆盖——加 <code>MAX_MODEL_LEN=16384</code> 显式压住 KV cache 预算后 0.3 才两边都留出余量。</li>
+<li><strong>veRL 4 个默认值坑</strong>（读源码 + 真机落地才定位到）：① <code>default_agent_loop</code> 默认是 <code>single_turn_agent</code>，只生成一次就结束，完全不看 multi_turn&#x2F;tools 配置——必须显式设 <code>tool_agent</code>（否则 num_turns 恒为 2.0 还在那”空转”）；② <code>multi_turn.format</code> 默认 <code>hermes</code>（只认 <code>&lt;tool_call&gt;{json}&lt;/tool_call&gt;</code>），而 SFT 用的 Qwen3.5 模板产出的是原生嵌套语法——必须显式设 <code>qwen3_coder</code>（veRL 自带 parser 与 Qwen 语法逐字节匹配）；③ <code>tensor_model_parallel_size</code> 默认 2，单卡会报 “world_size 1 is not divisible by infer_world_size 2”——必须显式设 1；④ <code>fsdp_config.model_dtype</code> 默认 fp32（9B 常驻 36GB 而非 bf16 的 18GB）——必须显式设 bfloat16，这才是 update_weights 阶段 ~60GB 内存的真实来源。</li>
+</ul>
+<p><strong>rollout 怎么桥回真实环境</strong>是另一个大坑：GRPO rollout 跑在 AutoDL 云 GPU 上，那是嵌套容器、没有 CAP_NET_ADMIN，根本跑不了 docker-compose 故障环境。方案是 SSH 反向隧道——Mac 侧 <code>ssh -N -R 2222:localhost:22 &lt;gpu&gt;</code>，GPU 侧经 <code>localhost:2222</code> 反向 SSH 回 Mac 执行真实 kubectl&#x2F;docker 命令（<code>verl_adapter/rollout_worker.py</code> 的 <code>ssh_tunnel_bash_executor</code>）：</p>
+<pre><code class="language-python">def ssh_tunnel_bash_executor(command, cwd=None, timeout_s=30.0):
+    &quot;&quot;&quot;Execute command on the environment host (the Mac) through the reverse
+    SSH tunnel — same signature as default_subprocess_bash_executor, so it
+    drops into the same bash_executor seam.&quot;&quot;&quot;
+    remote_command = f&quot;cd {shlex.quote(cwd)} &amp;&amp; {command}&quot; if cwd else command
+    argv = [*tunnel_ssh_argv(), remote_command]
+    proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s)
+    return proc.stdout, proc.stderr, proc.returncode
+</code></pre>
+<p>踩过的坑：AutoDL NAT 表 60 秒 idle 会清端口通道但 SSH 主 session 还活着，表现是”进程在但端口不通”，必须 <code>ServerAliveInterval=30</code> + <code>ExitOnForwardFailure=yes</code>（后者保证反向端口建立失败立刻退出，否则 SSH 会假成功但端口是死的）。</p>
+<p><code>verl_adapter/</code> 注册的是 <strong>Bash &#x2F; Read &#x2F; Grep &#x2F; Glob + RAG 检索</strong>五类通用工具（不是每类环境一个独立客户端）。Read&#x2F;Grep&#x2F;Glob 映射成本地命令后走<strong>同一个</strong> bash_executor seam——一个 seam 同时把四类工具全接进隧道（<code>rollout_worker.py</code>）：</p>
+<pre><code class="language-python">def _read_remote_command(tool_input):
+    file_path = str(tool_input.get(&quot;file_path&quot;, &quot;&quot;))
+    return f&quot;cat {shlex.quote(file_path)}&quot;
+
+def _grep_remote_command(tool_input):
+    pattern = str(tool_input.get(&quot;pattern&quot;, &quot;&quot;))
+    path = tool_input.get(&quot;path&quot;)
+    target = shlex.quote(str(path)) if path else &quot;.&quot;
+    return f&quot;grep -rE -- {shlex.quote(pattern)} {target}&quot;
+
+def _glob_remote_command(tool_input):
+    pattern = str(tool_input.get(&quot;pattern&quot;, &quot;&quot;))
+    normalized = pattern[2:] if pattern.startswith(&quot;./&quot;) else pattern
+    return f&quot;find . -path {shlex.quote(&#39;./&#39; + normalized)} -print&quot;
+
+_READ_GREP_GLOB_COMMAND_BUILDERS = {
+    &quot;Read&quot;: _read_remote_command, &quot;Grep&quot;: _grep_remote_command, &quot;Glob&quot;: _glob_remote_command,
+}
+</code></pre>
+<p>RAG 服务用 <code>threading.Lock</code> 常驻串行化 + 启动时真实非空查询预热，消掉首请求冷启 spike。</p>
+<p>还有一个很典型的”真机才暴露”的坑：<strong>cwd 必须显式穿透</strong>。一个没有 cwd 的 Glob（<code>find . -path ...</code>）会从远程登录默认目录——Mac 的整个 <code>$HOME</code>——开始扫，直接超时。<code>cwd</code> 因此从 <code>execute_tool_call</code>&#x2F;<code>RealHookRoutedTool</code>&#x2F;<code>run_real_rollout</code> 一路穿透到 executor。</p>
+<blockquote>
+<p><strong>知识点：单卡跑 Agentic RL 是系统工程</strong><br>“同居”问题是真正的工程活：actor+ref 与 vLLM 挤同一张 GPU、内存碎片管理、rollout 与训练权重换进换出、veRL 的默认值连环坑（agent_loop &#x2F; format &#x2F; TP &#x2F; model_dtype 一个不对就不跑）、云 GPU 无法跑 docker 时用 SSH 反向隧道桥回真实环境。每一个”小参数”背后都是一次 OOM 或一次端口假活的踩坑。</p>
+</blockquote>
+<hr>
+<h2 id="6-核心五：数据-——-怎么把-63-条轨迹变成-667-条样本"><a href="#6-核心五：数据-——-怎么把-63-条轨迹变成-667-条样本" class="headerlink" title="6. 核心五：数据 —— 怎么把 63 条轨迹变成 667 条样本"></a>6. 核心五：数据 —— 怎么把 63 条轨迹变成 667 条样本</h2><p>数据侧的完整链路（真实口径，<code>data/cold_start/</code>）：</p>
+<pre><code>四路合成种子（OTel 场景参数化 + flagd 组合 + 历史工单反演 + 手写兜底）
+  + v9 定点行为增强（A 反幻觉 / B 信号贫乏 / C 效率 / D code_fix 四家族，47 条）
+→ 教师模型采集（Claude Opus 真调 API，47 seed × 76 次调用，验收率 74%）
+→ 拒绝采样（v9 新采 35 条 + v8_base 保留 28 条 = 63 条通过轨迹，实花 $58.77）
+→ 前缀拆分（63 条轨迹 → 667 条工具级 SFT 样本：604 tool_call + 63 diagnosis）
+→ 双层去重（MD5 精确 + BGE 语义 cosine≥0.92）
+→ 分层切分（train 74 / held_out 22，与 SFT 有 3 个源 ID 重叠）
+</code></pre>
+<p><strong>前缀拆分</strong>（<code>data/cold_start/prefix_split.py</code>）是整个数据侧的核心机制：一条 N 步轨迹拆成 N 条子样本——前 N-1 条”上下文 &#x3D; 前 i-1 步，目标 &#x3D; 第 i 步的工具调用”，最后一条”上下文 &#x3D; 全部 N 步，目标 &#x3D; 最终 Diagnosis”：</p>
+<pre><code class="language-python">def split_trajectory(traj) -&gt; list[dict]:
+    steps = [s for s in (traj.get(&quot;steps&quot;) or []) if not _is_malformed_step(s)]
+    n = len(steps)
+    for i in range(1, n + 1):
+        if i &lt; n:
+            prefix_steps = steps[0 : i - 1]
+            target_type = &quot;tool_call&quot;
+            target = {&quot;tool_name&quot;: steps[i-1][&quot;tool_name&quot;], &quot;tool_input&quot;: steps[i-1][&quot;tool_input&quot;]}
+        else:
+            prefix_steps = steps[0:n]
+            target_type = &quot;diagnosis&quot;
+            target = traj.get(&quot;final_diagnosis&quot;)
+        subsamples.append({...})
+</code></pre>
+<p>每个子样本只对「目标」这一项计算 loss——这正是解决”反复调 kubectl 不收敛”问题的关键：模型在每一个中间节点都单独学一次「现在证据够不够收敛」，而不是只在整条轨迹的最后一步学一次。malformed 步骤（<code>__unparsedToolInput</code>）在拆分前先整步剔除，防止把”输出不合法 JSON”教给模型。</p>
+<p>两个机制层面的论断有消融证明：</p>
+<ul>
+<li><strong><code>eval/ablations/no_prefix_split.py</code></strong>：不做前缀拆分，SFT 收敛样本从 5 掉到 0——前缀展开是撑起 SFT 最小训练规模的必要机制。直觉也简单：9B 要做的是学会”每个 tool_call 边界处的下一步动作”，把 63 条整轨迹喂进去，9B 能从中拿到的训练信号太稀疏。</li>
+<li><strong><code>eval/ablations/no_credit_assignment.py</code></strong>：去掉 credit assignment，GRPO 组内方差 20.83 vs 0.0——稀疏的 outcome 信号被组内均值抹平，advantage 全零，policy 学不到东西。</li>
+</ul>
+<p><strong>一个重要的边界交代</strong>：训练侧的 mock harness（<code>eval/run_baseline_comparison.py</code>）只做 reward 调参期的快速迭代（一条 ~10 秒 vs 真环境 3 分钟），<strong>从未接过真 checkpoint</strong>。所有对外披露的三档数字，全部跑在 AIops-agent 自己的 <code>eval/run.py</code> + 13 个真实 docker-compose 故障栈上——训练侧不重造评测轮子、直接用生产 harness，是另一个关键决策。</p>
+<blockquote>
+<p><strong>知识点：Agent SFT 数据的前缀拆分</strong><br>让模型学会”在每个工具调用边界决定下一步”，而不是只学”最后输出个诊断”——前缀拆分把一条轨迹摊成 N 个决策点，每个决策点单独算 loss。这是小模型能收敛的必要机制，也是有消融证明的。</p>
+</blockquote>
+<hr>
+<h2 id="7-聊聊”可复现”这件事"><a href="#7-聊聊”可复现”这件事" class="headerlink" title="7. 聊聊”可复现”这件事"></a>7. 聊聊”可复现”这件事</h2><p>这个项目最打动我的一个细节，是它对<strong>每个数字都给了文件级的证据链</strong>：$58.77 对应 <code>data/cold_start/_collection_v9_progress.md</code> 里的原始账单；三档数字对应 <code>AIops-agent/reports/</code> 下三个独立目录的原始轨迹；checkpoint 走 <code>save_freq=20 / max_actor_ckpt_to_keep=2</code> 的落盘策略（<code>grpo/verl_config/aiops_grpo.yaml</code>），训完用 step15 起 vLLM 可重跑评测；<code>grpo/verl_config/aiops_grpo.yaml</code> 里每个字段都标了 [VERIFIED] &#x2F; [ASSUMED] &#x2F; [JUDGMENT]：</p>
+<pre><code class="language-yaml"># 校验状态（本会话没有安装 veRL、没有 GPU，全部离线核对）:
+#   - 字段名前标 [VERIFIED]  : 字段名和默认值经真实源码/配置文件核实存在。
+#   - 字段名前标 [ASSUMED]   : 字段名本身未直接核实到，是按 veRL 命名习惯或
+#     设计文档要求推断的，需要有 veRL 环境的人再核实。
+#   - 数值前标 [JUDGMENT]   : 字段名是 [VERIFIED] 的，但数值是设计文档没给出
+#     精确数字、需要工程判断的（只给了方向，例如&quot;小幅扣分&quot;）。
+</code></pre>
+<p>哪些是核实过源码的、哪些是按命名习惯推断的、哪些是工程判断的数值，清清楚楚。这种”诚实标注未知区”的习惯，在个人项目里很少见，但正是它能经得起面试官逐条追问的原因。</p>
+<blockquote>
+<p><strong>知识点：把”未知”也写进配置</strong><br>训练配置里区分 [VERIFIED] &#x2F; [ASSUMED] &#x2F; [JUDGMENT]——哪些字段核实过、哪些只是推断、哪些数值是拍脑袋的。诚实标注未知区，既方便后继者，也让每个数字可追溯。</p>
+</blockquote>
+<hr>
+<h2 id="8-架构全景回顾"><a href="#8-架构全景回顾" class="headerlink" title="8. 架构全景回顾"></a>8. 架构全景回顾</h2><p>把上述各线拼起来，整个后训练系统的架构就是：</p>
+<pre><code>┌─────────────────────── 数据侧 data/ ───────────────────────┐
+│ 四路合成种子 → 教师采集(Opus) → 拒绝采样(63条) → 前缀拆分     │
+│ (667样本) → 双层去重 → 分层切分(train 74 / held_out 22)      │
+└───────────────────────┬────────────────────────────────────┘
+                        ▼
+┌─────────────────────── SFT：LLaMA-Factory + LoRA ───────────┐
+│ Qwen3.5-9B text-only · r=16 α=32 · 12 个 Linear proj 全覆盖 │
+│ 教会：工具调用格式 + 白名单命中 + 走完整条轨迹                │
+└───────────────────────┬────────────────────────────────────┘
+                        ▼ SFT checkpoint 作为冷启 + ref
+┌─────────────────────── GRPO：veRL 0.6.0 · 单卡 A800 ────────┐
+│ group_size=6 · 单卡 colocate · fsdp2+LoRA · max_assistant │
+│ turns=12 · use_remove_padding · default_agent_loop=tool_agent │
+│  rollout ──SSH 反向隧道──▶ Mac 真实 docker 故障环境          │
+│   ▼                                                          │
+│  RealHookRoutedTool(五类工具) → 真实 hook 拦截 → observation │
+│   ▼                                                          │
+│  Trajectory → reward_router 组装三层 reward                  │
+└───────────────────────┬────────────────────────────────────┘
+                        ▼
+┌─────────────────────── Reward 三层（无 mixing 系数）─────────┐
+│ step_reward 7 条稠密信号  +  credit_assignment 覆盖度加权     │
+│  +  outcome_reward 五项(tripwire)  +  anti-hacking 四防线    │
+└───────────────────────┬────────────────────────────────────┘
+                        ▼
+             评测：生产 harness eval/run.py + 13 个真实故障栈
+</code></pre>
+<hr>
+<h2 id="9-Agent-工程师的几点心得"><a href="#9-Agent-工程师的几点心得" class="headerlink" title="9. Agent 工程师的几点心得"></a>9. Agent 工程师的几点心得</h2><ol>
+<li><strong>先 SFT 教会”格式”，再 RL 学”决策”。</strong> RL from scratch 在工具调用都成问题时会整组失败、advantage 塌陷。两段式不是学术偏好，是工程必要。</li>
+<li><strong>Reward 从生产机制里长出来。</strong> hook&#x2F;白名单&#x2F;schema 零改造 import，训练与生产永远同一套规则——这是训练口径和生产口径永远一致的最省心路径。</li>
+<li><strong>负 reward 敢给，且要”一票否决”。</strong> evidence fabrication -0.5 显著大于任何单步正信号，policy 不会赌一把。惩罚必须大于机会成本。</li>
+<li><strong>Anti-hacking 要预判，做结构性防御。</strong> 双源覆盖门、evidence 可追溯、real-health-only、组方差降采样——从数据流向上让作弊不可能，而不是事后补罚。</li>
+<li><strong>用运行时断言硬化 reward 边界。</strong> <code>_assert_no_fix_result_leak</code> 把”误把修复结论接进诊断 reward”从静默 bug 变成响亮异常。</li>
+<li><strong>单卡跑 Agentic RL 是系统工程。</strong> 单卡 colocate、内存碎片、默认值连环坑（agent_loop &#x2F; format &#x2F; TP &#x2F; model_dtype）、SSH 反向隧道、cwd 穿透……每一个参数背后都是一次踩坑。</li>
+<li><strong>数据要能拆成决策点。</strong> 前缀拆分让模型在每个 tool_call 边界学”下一步”，消融证明不做就训不动。</li>
+<li><strong>诚实标注未知区。</strong> [VERIFIED] &#x2F; [ASSUMED] &#x2F; [JUDGMENT]，每个数字都有文件级证据链——这是经得起追问的底气。</li>
+</ol>
+<hr>
+<h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 克隆项目（AIops-agent 是 submodule，需初始化）
+git clone --recurse-submodules https://github.com/wjl8636/aiops-agentic-rl.git
+cd aiops-agentic-rl
+git submodule update --init --recursive     # 拉取 AIops-agent（生产 hook/白名单来源）
+
+# 2. 环境（Python ≥ 3.11；训练侧需要 GPU + veRL 0.6.0）
+pip install -e .
+# 训练机（AutoDL 等）：torch + veRL + vllm + fsdp2 环境
+# Mac/本地：AIops-agent 的 docker-compose OTel Demo 故障环境（rollout 桥回的目标）
+
+# 3. 训练
+bash grpo/train_grpo.sh                     # 或按 aiops_grpo.yaml 的配置跑 main_ppo
+# 关键环境变量：AIOPS_TUNNEL_USER / AIOPS_TUNNEL_PORT（SSH 反向隧道）
+#               AIOPS_MAC_AGENT_DIR / AIOPS_MAC_PYTHON / AIOPS_MAC_REPO_ROOT
+
+# 4. 评测（直接用生产 harness，不重造轮子）
+python eval/run_eval.py --ckpt step15       # 13 个真实 docker-compose 故障栈
+</code></pre>
+<p>跑起来后，试着改一条 reward 信号看组内方差怎么变、把 <code>_assert_no_fix_result_leak</code> 注释掉看它什么时候会炸、再对比 SFT checkpoint 与 GRPO checkpoint 在同一场景上的 route 判定——这三处正是这套系统最见功力的地方。</p>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>这个项目的价值在于它是**”应用工程做深”到”后训练纵深”之间最短的一条桥**：不重新发明一个玩具环境，而是把生产系统里现成的安全机制（hook、白名单、schema）零改造变成训练信号；不在评测上自嗨，而是直接用生产 harness 的三档对比说话。</p>
+<p>几个诚实的结论，也是这个项目最重要的收获：</p>
+<ul>
+<li><strong>9B 没有追平 Opus</strong>（service 0.80 vs 0.913，route 0.64 vs 0.913），这恰恰是正确目标定位的证据——要证明的是”开源小模型能撑同一套 Agent 系统”，不是”超越闭源大模型”；</li>
+<li><strong>Agentic RL 训完的模型上生产从来不是原地替换</strong>——10% 流量 shadow 灰度、观察 fabrication&#x2F;hook_deny 率变化、稳定 2-4 周再全量，这是 SOP；</li>
+<li><strong>80% 的时间花在把异构组件糊起来</strong>：大模型训练、分布式框架、云资源管理、网络隧道、向量库、docker 编排糅在一起，reward 设计反而是相对顺利的部分。写在简历上的一句”实现 GRPO 训练”背后是三周的踩坑史。</li>
+</ul>
+<p>如果你对应用侧（双 Agent 诊断修复闭环）感兴趣，见<a target="_blank" rel="noopener" href="https://github.com/wjl8636/AIopsAgent/blob/main/BLOG-%E6%95%85%E9%9A%9C%E8%AF%8A%E6%96%AD%E8%87%AA%E6%84%88Agent%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0.md">上一篇博客</a>和 <a target="_blank" rel="noopener" href="https://github.com/wjl8636/AIopsAgent"><code>AIopsAgent</code></a> 仓库。</p>
+<hr>
+<p><em>本文内容均基于项目源码（<code>reward/</code>、<code>grpo/</code>、<code>verl_adapter/</code>、<code>data/cold_start/</code> 等）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/aiops-agentic-rl">https://github.com/wjl8636/aiops-agentic-rl</a></em> ⭐</p>
+
+    </div>
+    
+    
+    
+    
+    
+    
+    
+</div>
+
+            <footer id="footer">
+    <div id="footer-wrap">
+        <div>
+            &copy;
+            2026 - 2026 WJL的博客
+            <span id="footer-icon">
+                <i class="fa-solid fa-font-awesome fa-fw"></i>
+            </span>
+            &commat;WJL
+        </div>
+        <div>
+            Based on the <a target="_blank" rel="noopener" href="https://hexo.io">Hexo Engine</a> &amp;
+            <a target="_blank" rel="noopener" href="https://github.com/theme-particlex/hexo-theme-particlex">ParticleX Theme</a>
+        </div>
+        
+    </div>
+</footer>
+
+        </div>
+        
+        <transition name="fade">
+            <div id="preview" ref="preview" v-show="previewShow">
+                <img id="preview-content" ref="previewContent" />
+            </div>
+        </transition>
+        
+    </div>
+    <script src="/js/main.js"></script>
+    
+    
+
+
+
+
+    
+</body>
+</html>
