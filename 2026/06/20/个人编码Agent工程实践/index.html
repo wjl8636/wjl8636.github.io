@@ -175,43 +175,50 @@
             
             <span class="tag">
                 
-                <a href="/tags/Agent/" style="color: #ffa2c4">
+                <a href="/tags/Agent/" style="color: #ff7d73">
                     Agent
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8/" style="color: #03a9f4">
+                <a href="/tags/%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8/" style="color: #00bcd4">
                     工具调用
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #00bcd4">
+                <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/" style="color: #00a596">
                     工程实践
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/ReAct/" style="color: #00a596">
-                    ReAct
-                </a>
-            </span>
-            
-            <span class="tag">
-                
-                <a href="/tags/LLM/" style="color: #03a9f4">
+                <a href="/tags/LLM/" style="color: #ffa2c4">
                     LLM
                 </a>
             </span>
             
             <span class="tag">
                 
-                <a href="/tags/HITL/" style="color: #00a596">
+                <a href="/tags/ReAct/" style="color: #ff7d73">
+                    ReAct
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/HITL/" style="color: #00bcd4">
                     HITL
+                </a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E8%87%AA%E8%BF%9B%E5%8C%96/" style="color: #ff7d73">
+                    自进化
                 </a>
             </span>
             
@@ -221,21 +228,24 @@
     
     <div class="content" v-pre>
         <h1 id="🛠️-手把手拆解：一个「终端编码助手」的-Agent-工程实践"><a href="#🛠️-手把手拆解：一个「终端编码助手」的-Agent-工程实践" class="headerlink" title="🛠️ 手把手拆解：一个「终端编码助手」的 Agent 工程实践"></a>🛠️ 手把手拆解：一个「终端编码助手」的 Agent 工程实践</h1><blockquote>
-<p>不再是把大模型当成一个「会聊天的 API」，而是把它跑成一支 <strong>自带手、脚、记忆和团队的虚拟工程师</strong>：能读写代码、能跑命令、能在关键操作前征求你同意、能拆子任务并行、还能把学到的东西记进文件。本文从一名 AI Agent 开发工程师的视角，深度解析开源项目 <strong>PersonalCode</strong>（<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">github.com&#x2F;wjl8636&#x2F;Personal-Code-Assistant</a>），凡是代码里真实存在的地方，我都会给出文件路径和关键实现，希望能帮你把「Agent」从概念落到工程。</p>
+<p>不再是把大模型当成一个「会聊天的 API」，而是把它跑成一支 <strong>自带手、脚、记忆和团队的虚拟工程师</strong>：能读写代码、能跑命令、能在关键操作前征求你同意、能拆子任务并行、能把学到的东西记进文件、还能从你的反馈里<strong>自己沉淀出可复用的工作方法</strong>。本文从一名 AI Agent 开发工程师的视角，深度解析开源项目 <strong>PersonalCode</strong>（<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">github.com&#x2F;wjl8636&#x2F;Personal-Code-Assistant</a>），凡是代码里真实存在的地方，我都会给出文件路径和关键实现，希望能帮你把「Agent」从概念落到工程。</p>
 </blockquote>
 <hr>
-<h2 id="0-本文你会收获什么"><a href="#0-本文你会收获什么" class="headerlink" title="0. 本文你会收获什么"></a>0. 本文你会收获什么</h2><p>这篇文章不是功能清单，而是围绕一个真实项目梳理 <strong>Agent 工程的核心知识图谱</strong>。我尽量把抽象的概念（ReAct、事件驱动主循环、工具调用、人在回路 HITL、上下文压缩、长期记忆、多智能体编排、可观测性……）都对应到一段真实代码，让你看完能直接用。</p>
+<h2 id="0-本文你会收获什么"><a href="#0-本文你会收获什么" class="headerlink" title="0. 本文你会收获什么"></a>0. 本文你会收获什么</h2><p>这篇文章不是功能清单，而是围绕一个真实项目梳理 <strong>Agent 工程的核心知识图谱</strong>。我尽量把抽象的概念（ReAct、事件驱动主循环、工具调用、人在回路 HITL、上下文压缩、会话折叠、长期记忆、Skills 自进化、多智能体编排、消融测评、可观测性……）都对应到一段真实代码，让你看完能直接用。</p>
 <p>涵盖的主题索引：</p>
 <ul>
 <li>Agent 的<strong>事件驱动主循环</strong>与<strong>事件协议</strong></li>
 <li>统一<strong>工具抽象</strong> <code>Tool</code>（Agent 的「手」）</li>
 <li><strong>流式工具执行 + 并发分批</strong>（读并发 &#x2F; 写串行）</li>
 <li><strong>人在回路（HITL）</strong>：六层权限决策管线</li>
-<li><strong>上下文管理</strong>：auto-compact 与工具结果溢写</li>
+<li><strong>上下文管理</strong>：两层渐进式压缩（工具结果溢写 + auto-compact 摘要）</li>
+<li><strong>会话记忆折叠</strong>：把长会话折叠成结构化状态，供继续执行</li>
 <li><strong>文件级长期记忆</strong>：用户级 &#x2F; 项目级双层</li>
+<li><strong>Skills 自进化</strong>：从用户反馈自动沉淀可复用工作流（程序记忆的自我演化）</li>
 <li><strong>多智能体 Teams</strong>：Lead–Worker 协调模式</li>
 <li><strong>子 Agent 与 Verification</strong>（Reflexion 式对抗质检）</li>
-<li><strong>技能 Skill（程序记忆）</strong> 与 <strong>MCP 工具扩展</strong></li>
+<li><strong>技能 Skill 与 MCP 工具扩展</strong></li>
+<li><strong>消融测评</strong>：用配对 A&#x2F;B 证明一个机制到底有没有用</li>
 <li><strong>可观测性</strong>：生命周期 Hooks + 父子 Trace 树</li>
 <li>工程韧性：强制迭代上限、max_tokens 自愈、崩溃恢复</li>
 </ul>
@@ -274,16 +284,24 @@
 </tr>
 <tr>
 <td><strong>上下文管理</strong></td>
-<td>工具结果溢写落盘 + Layer-2 自动压缩（摘要 + 恢复）</td>
+<td>工具结果溢写落盘 + Layer-2 自动压缩（摘要 + 恢复）+ 结构化会话折叠</td>
+</tr>
+<tr>
+<td><strong>Skills 自进化</strong></td>
+<td>从「对话 + 下一轮用户反馈」自动沉淀技能为 <code>SKILL.md</code>，带版本与审计</td>
 </tr>
 <tr>
 <td><strong>技能 &#x2F; MCP</strong></td>
 <td>Skill 技能包（程序记忆）+ MCP 可插拔工具扩展</td>
 </tr>
+<tr>
+<td><strong>评测</strong></td>
+<td>固定任务集上的配对消融（A&#x2F;B），量化机制真实收益</td>
+</tr>
 </tbody></table>
-<p>其中以 <strong>Agent 主循环、权限决策、多智能体 Teams、文件级记忆</strong> 最具 Agent 工程代表性，本文作为主线展开，最后补上可观测性、韧性等支线。</p>
+<p>其中以 <strong>Agent 主循环、权限决策、上下文治理（压缩 + 折叠）、Skills 自进化、多智能体 Teams</strong> 最具 Agent 工程代表性，本文作为主线展开，最后补上可观测性、韧性、评测等支线。</p>
 <hr>
-<h2 id="2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎"><a href="#2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎" class="headerlink" title="2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎"></a>2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎</h2><p>整个系统的核心在 <code>personalcode/agent.py</code> 的 <code>Agent</code> 类。它没有把「让大模型干活」藏进一个黑盒函数，而是显式地跑一个 <strong>事件驱动的 ReAct 循环</strong>：</p>
+<h2 id="2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎"><a href="#2-核心一：Agent-主循环-——-一个事件驱动的-ReAct-引擎" class="headerlink" title="2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎"></a>2. 核心一：Agent 主循环 —— 一个事件驱动的 ReAct 引擎</h2><p>整个系统的核心在 <code>personalcode/agent.py</code> 的 <code>Agent</code> 类。它没有把「让大模型干活」藏进一个黑盒函数，而是显式地跑一个 <strong>事件驱动的 ReAct 循环</strong>（<code>agent.py:863</code> 的 <code>run()</code>）：</p>
 <pre><code class="language-python">while True:
     iteration += 1
     if self.max_iterations &gt; 0 and iteration &gt; self.max_iterations:
@@ -294,7 +312,7 @@
     # 3. 模型一旦发出 tool_use，立刻提交执行（StreamingExecutor）
     # 4. 把 ToolResult 回填进对话历史 → 下一轮循环
 </code></pre>
-<p>关键点：<code>Agent.run()</code> 是<strong>异步生成器</strong>，它 <code>yield</code> 的是一系列 <code>AgentEvent</code>。所有对外的「声音」都被建模成了<strong>事件类型联合</strong>（<code>agent.py:161</code>）：</p>
+<p>关键点：<code>Agent.run()</code> 是<strong>异步生成器</strong>，它 <code>yield</code> 的是一系列 <code>AgentEvent</code>。所有对外的「声音」都被建模成了<strong>事件类型联合</strong>（<code>agent.py:169</code>）：</p>
 <pre><code class="language-python">AgentEvent = (
     StreamText | ThinkingText | RetryEvent
     | ToolUseEvent | ToolResultEvent
@@ -308,7 +326,7 @@
 </blockquote>
 <p><code>__main__.py</code> 里就体现了这种解耦：同一个 <code>Agent.run()</code>，TUI 模式消费它渲染界面，<code>-p</code> 模式用 <code>stream-json</code> 把事件序列化成 NDJSON 喂给脚本。</p>
 <hr>
-<h2 id="3-核心二：工具抽象-——-Agent-长出「手」"><a href="#3-核心二：工具抽象-——-Agent-长出「手」" class="headerlink" title="3. 核心二：工具抽象 —— Agent 长出「手」"></a>3. 核心二：工具抽象 —— Agent 长出「手」</h2><p>一个只会「说话」的 Agent 改不了代码。系统用一套统一的 <code>Tool</code> 抽象（<code>personalcode/tools/base.py</code>）让 Agent 真正拿到外部世界的能力：</p>
+<h2 id="3-核心二：工具抽象-——-Agent-长出「手」"><a href="#3-核心二：工具抽象-——-Agent-长出「手」" class="headerlink" title="3. 核心二：工具抽象 —— Agent 长出「手」"></a>3. 核心二：工具抽象 —— Agent 长出「手」</h2><p>一个只会「说话」的 Agent 改不了代码。系统用一套统一的 <code>Tool</code> 抽象（<code>personalcode/tools/base.py:35</code>）让 Agent 真正拿到外部世界的能力：</p>
 <pre><code class="language-python">class Tool(ABC):
     name: str
     description: str
@@ -321,14 +339,14 @@
     @abstractmethod
     async def execute(self, params: BaseModel) -&gt; ToolResult: ...
 </code></pre>
-<p>内置工具用 <code>create_default_registry()</code>（<code>tools/__init__.py:182</code>）装配：<code>ReadFile</code>、<code>WriteFile</code>、<code>EditFile</code>、<code>Bash</code>、<code>Glob</code>、<code>Grep</code>，再加上 <code>Agent</code>（派子 Agent）、<code>ToolSearch</code>、<code>mcp_call</code>、<code>SendMessage</code>、<code>TaskCreate</code> 等高级工具。</p>
+<p>内置工具用 <code>create_default_registry()</code>（<code>tools/__init__.py:178</code>）装配：<code>ReadFile</code>、<code>WriteFile</code>、<code>EditFile</code>、<code>Bash</code>、<code>Glob</code>、<code>Grep</code>，再加上 <code>Agent</code>（派子 Agent）、<code>ToolSearch</code>、<code>mcp_call</code>、<code>SendMessage</code>、<code>TaskCreate</code>、<code>skill_create</code>、<code>skill_evolve</code>、<code>compact_context</code> 等高级工具。</p>
 <blockquote>
 <p><strong>知识点：工具是 Agent 的「外设总线」</strong><br>把每个能力封装成 <code>name + description + params_model + execute()</code> 四件套，<code>params_model</code> 直接用 pydantic——<strong>schema 和校验二合一</strong>。新增一个工具 &#x3D; 新增一个类注册进去，Agent 就会在下一轮自动看到它的 schema 并学会调用。</p>
 </blockquote>
-<p>一个被代码注释反复强调的细节是 <code>is_concurrency_safe</code> 不看类别、看<strong>实际参数</strong>：<code>ls</code> 和 <code>rm</code> 都是 <code>Bash</code>，前者可以并发、后者必须独占（<code>tools/base.py:56</code>）。这是后面并发分批的决策依据。</p>
+<p>一个被代码注释反复强调的细节是 <code>is_concurrency_safe</code> 不看类别、看<strong>实际参数</strong>（<code>tools/base.py:52</code>）：<code>ls</code> 和 <code>rm</code> 都是 <code>Bash</code>，前者可以并发、后者必须独占。这是后面并发分批的决策依据。</p>
 <hr>
-<h2 id="4-核心三：流式工具执行-并发分批"><a href="#4-核心三：流式工具执行-并发分批" class="headerlink" title="4. 核心三：流式工具执行 + 并发分批"></a>4. 核心三：流式工具执行 + 并发分批</h2><p>Agent 一轮可能同时发出好几个工具调用。这里有个很微妙的工程问题：<strong>要不要等整个 LLM 响应流结束再执行工具？</strong> 如果等，用户会看到「思考思考……（十几秒）……刷地一下全干完」；如果不等、收到就跑，又会破坏模型给出的执行顺序（比如 WriteFile 之后紧跟一条依赖它的 Bash）。</p>
-<p>PersonalCode 的解法是 <code>StreamingExecutor</code>（<code>agent.py:280</code>）：<strong>在 LLM 流式输出期间就收集工具调用，等流结束后再按「并发安全的批」统一执行</strong>。</p>
+<h2 id="4-核心三：流式工具执行-并发分批"><a href="#4-核心三：流式工具执行-并发分批" class="headerlink" title="4. 核心三：流式工具执行 + 并发分批"></a>4. 核心三：流式工具执行 + 并发分批</h2><p>Agent 一轮可能同时发出好几个工具调用。这里有个很微妙的工程问题：<strong>要不要等整个 LLM 响应流结束再执行工具？</strong> 如果等，用户会看到「思考思考……刷地一下全干完」；如果不等、收到就跑，又会破坏模型给出的执行顺序（比如 WriteFile 之后紧跟一条依赖它的 Bash）。</p>
+<p>PersonalCode 的解法是 <code>StreamingExecutor</code>（<code>agent.py:303</code>）：<strong>在 LLM 流式输出期间就收集工具调用，等流结束后再按「并发安全的批」统一执行</strong>。</p>
 <pre><code class="language-python">def partition_tool_calls(tool_calls, registry) -&gt; list[ToolBatch]:
     # 相邻的并发安全调用归到同一批并发跑，其余各自独占一个串行批
     for tc in tool_calls:
@@ -343,18 +361,18 @@
 <p><strong>知识点：工具调度的并发安全</strong><br>工具调度不是「全并发」也不是「全串行」，而是<strong>按数据依赖分批</strong>：只读不互扰的并发，会改状态的串行。既保住吞吐，又保住语义，这是生产级 Agent 的标配取舍。</p>
 </blockquote>
 <hr>
-<h2 id="5-核心四：人在回路（HITL）——-六层权限决策管线"><a href="#5-核心四：人在回路（HITL）——-六层权限决策管线" class="headerlink" title="5. 核心四：人在回路（HITL）—— 六层权限决策管线"></a>5. 核心四：人在回路（HITL）—— 六层权限决策管线</h2><p>PersonalCode 最鲜明的工程特质是<strong>把控制权交还给人</strong>。默认权限模式下，写文件和跑命令前都会先征求你的同意。这套逻辑在 <code>personalcode/permissions/checker.py</code> 的 <code>PermissionChecker.check()</code> 里，是一条 <strong>6 层决策管线</strong>：</p>
+<h2 id="5-核心四：人在回路（HITL）——-六层权限决策管线"><a href="#5-核心四：人在回路（HITL）——-六层权限决策管线" class="headerlink" title="5. 核心四：人在回路（HITL）—— 六层权限决策管线"></a>5. 核心四：人在回路（HITL）—— 六层权限决策管线</h2><p>PersonalCode 最鲜明的工程特质是<strong>把控制权交还给人</strong>。默认权限模式下，写文件和跑命令前都会先征求你的同意。这套逻辑在 <code>personalcode/permissions/checker.py</code> 的 <code>PermissionChecker.check()</code>（<code>checker.py:59</code>）里，是一条 <strong>6 层决策管线</strong>（对应代码注释的 Layer 0–5）：</p>
 <pre><code class="language-python">def check(self, tool, arguments) -&gt; Decision:
     # Layer 0: Plan 模式例外放行（只允许 Agent/ToolSearch/AskUserQuestion/ExitPlanMode）
-    # Layer 1: 安全的只读命令自动放行
+    # Layer 1: 安全的只读命令自动放行（is_safe_command）
     # Layer 1b: 危险命令黑名单（危险命令拦截，直接 deny）
-    # Layer 1c: OS 沙箱开启时命令自动放行（内核兜底）
-    # Layer 2: 路径沙箱（只读/写文件，受保护路径一律拒绝）
-    # Layer 3: 规则引擎匹配（allow/ask/deny）
+    # Layer 1c: OS 沙箱开启时命令自动放行（内核兜底），复合命令逐条核验防拼接绕过
+    # Layer 2: 路径沙箱（文件类工具，受保护路径一律拒绝，任何模式都拦）
+    # Layer 3: 规则引擎匹配（allow/ask/deny，优先级 deny &gt; ask &gt; allow）
     # Layer 4: 权限模式兜底判定（default / acceptEdits / plan / bypassPermissions）
     # Layer 5: 触发人工确认（HITL）→ 弹 PermissionRequest
 </code></pre>
-<p>配合 <code>permissions/modes.py</code> 的四模式矩阵：</p>
+<p>配合 <code>permissions/modes.py:19</code> 的四模式矩阵：</p>
 <table>
 <thead>
 <tr>
@@ -390,24 +408,57 @@
 </tr>
 </tbody></table>
 <p>这里有两个非常「Agent 味」的设计：</p>
-<p><strong>① 拒绝也带反馈。</strong> 用户拒绝时还能附一句话（<code>PermissionReply.feedback</code>），这句反馈会被拼进拒绝结果交给模型，让它按你的要求<strong>换个做法</strong>——而不是简单地说「不行」（<code>agent.py:144</code>、<code>conversation_pairing.py</code> 的 <code>rejected_tool_result</code>）。</p>
-<p><strong>② 允许则落地为规则。</strong> 选了 <code>ALLOW_ALWAYS</code> 时，系统把这次操作写进本地规则文件（<code>agent.py:1023</code>），规则引擎每次评估现读现匹配——<strong>这一轮之后即刻生效</strong>，从此这条命令免确认。</p>
+<p><strong>① 拒绝也带反馈。</strong> 用户拒绝时还能附一句话（<code>PermissionReply.feedback</code>，<code>agent.py:153</code>），这句反馈会被拼进拒绝结果交给模型，让它按你的要求<strong>换个做法</strong>——而不是简单地说「不行」（<code>conversation_pairing.py</code> 的 <code>rejected_tool_result</code>）。</p>
+<p><strong>② 允许则落地为规则。</strong> 选了 <code>ALLOW_ALWAYS</code> 时，系统把这次操作写进本地规则文件（<code>agent.py:1399</code> 的 <code>append_local_rule</code>），规则引擎每次评估现读现匹配——<strong>这一轮之后即刻生效</strong>，从此这条命令免确认。</p>
+<p><strong>③ 受保护路径无论什么模式都禁写。</strong> <code>PathSandbox._DEFAULT_DENY_WRITE</code>（<code>sandbox.py:10</code>）把 <code>config.yaml</code>、<code>permissions.local.yaml</code>、<code>skills/</code> 列为无条件禁写，<code>check_deny_write</code>（<code>sandbox.py:95</code>）在模式判断之前执行，连 <code>bypassPermissions</code> 也拦——<strong>因为能改这些文件就等于能改权限体系本身</strong>。</p>
 <blockquote>
 <p><strong>知识点：Agent 的工具护栏（Guardrails）</strong><br>让 Agent 拥有写文件、跑命令的能力，就必须有<strong>分层护栏</strong>：危险命令黑名单、路径沙箱、规则引擎、权限模式、最终人工确认，一层层收敛。真正面向用户的产品，Agent 的「权力」永远是<strong>受约束的、可解释的、可被否决的</strong>。</p>
 </blockquote>
 <hr>
-<h2 id="6-核心五：上下文管理-——-auto-compact-与工具结果溢写"><a href="#6-核心五：上下文管理-——-auto-compact-与工具结果溢写" class="headerlink" title="6. 核心五：上下文管理 —— auto-compact 与工具结果溢写"></a>6. 核心五：上下文管理 —— auto-compact 与工具结果溢写</h2><p>长会话最大的敌人是上下文窗口。PersonalCode 做了<strong>两层防御</strong>（<code>context/</code>）：</p>
-<p><strong>Layer 1：工具结果溢写落盘。</strong> 单条工具输出超过 <code>MAX_OUTPUT_CHARS = 50000</code> 字符时，完整内容写盘，对话历史里只保留预览和文件路径（<code>tools/base.py:23</code>、<code>agent.py:1387</code> 的 <code>_maybe_persist_or_truncate</code>）。模型要全文就自己再 ReadFile——既保住上下文，又不丢信息。</p>
-<p><strong>Layer 2：auto-compact 自动压缩。</strong> 接近 context window 上限时，用一次 LLM 调用把对话压成摘要（<code>agent.py:645</code>、<code>context</code> 的 <code>auto_compact</code>）。压缩不是裸丢历史，而是保存一个 <code>RecoveryState</code>——把最近读过的文件和调过的 skill 快照下来，压缩后能<strong>重建工作上下文</strong>：</p>
-<pre><code class="language-python">def _snapshot_for_recovery(self, tc, result):   # agent.py:1063
+<h2 id="6-核心五：上下文管理-——-两层渐进式压缩"><a href="#6-核心五：上下文管理-——-两层渐进式压缩" class="headerlink" title="6. 核心五：上下文管理 —— 两层渐进式压缩"></a>6. 核心五：上下文管理 —— 两层渐进式压缩</h2><p>长会话最大的敌人是上下文窗口。PersonalCode 做了<strong>两层渐进式防御</strong>（<code>context/manager.py</code>）：</p>
+<p><strong>Layer 1：工具结果入场预算（无损）。</strong> 结果进历史<strong>之前</strong>就处理成终态：</p>
+<ul>
+<li>单条工具输出超过 <code>MAX_OUTPUT_CHARS = 50000</code> 字符（<code>tools/base.py:19</code>）时，完整内容写盘，历史里只留 <code>&lt;persisted-output&gt;</code> 标签 + 路径 + 前 2KB 预览（<code>manager.py:112</code> <code>persist_tool_result</code>、<code>manager.py:123</code> <code>make_persisted_preview</code>）。</li>
+<li>一轮并行调多个工具时，整批结果总字符超 <code>AGGREGATE_CHAR_LIMIT = 200_000</code>（<code>manager.py:27</code>）会<strong>从最大的开始逐条溢写</strong>，直到回到限额内（<code>manager.py:155</code> <code>apply_tool_result_budget</code>）。</li>
+<li>防「读回→溢写→再读回」死循环：读回溢写文件的结果豁免溢写（<code>manager.py:140</code> <code>is_spill_readback</code>）。</li>
+</ul>
+<p><strong>Layer 2：auto-compact 自动压缩（有损）。</strong> 接近 context window 上限时触发：</p>
+<ul>
+<li><strong>双阈值</strong>（<code>manager.py:638</code>）：软触发线 &#x3D; 有效窗口 − 13K（<code>AUTO_COMPACT_SAFETY_MARGIN</code>，走熔断器）、硬触发线 &#x3D; 窗口 − 3K（<code>MANUAL_COMPACT_SAFETY_MARGIN</code>，强制压绕过熔断）。</li>
+<li><strong>熔断器</strong> <code>CompactCircuitBreaker</code>（<code>manager.py:584</code>）：连续失败 3 次停手。</li>
+<li><strong>保留近期原文</strong>（<code>_compute_keep_start_index</code>，<code>manager.py:511</code>）：尾部保留到「token ≥ 10K 或消息 ≥ 5 条」，上限 40K；再 <code>_align_keep_start_to_tool_pair</code>（<code>manager.py:552</code>）<strong>绝不拆散 tool_use&#x2F;tool_result 配对</strong>。</li>
+<li><strong>压缩后重建现场</strong>：保存 <code>RecoveryState</code>——把最近读过的文件和调过的 skill 快照下来，压缩后能重建工作上下文（<code>agent.py:1433</code> <code>_snapshot_for_recovery</code>）。</li>
+</ul>
+<pre><code class="language-python">def _snapshot_for_recovery(self, tc, result):   # agent.py:1433
     if tc.tool_name != &quot;ReadFile&quot;: return       # 只快照 ReadFile
     self.recovery_state.record_file_read(path, content)
 </code></pre>
 <blockquote>
-<p><strong>知识点：Agent 的上下文管理策略</strong><br>上下文不是「满了就完蛋」，而是可以<strong>分层治理</strong>：超大的工具结果溢写落盘、过长的历史摘要压缩、关键工作上下文做恢复快照。这三点合起来，才能让一个 Agent 在一轮几百次工具调用的长任务里不「失忆」。</p>
+<p><strong>知识点：Agent 的上下文管理策略</strong><br>上下文不是「满了就完蛋」，而是可以<strong>分层渐进治理</strong>：先对工具结果做无损溢写（信息不丢、只换位置），撑不住时才对整段历史做有损压缩。而且压缩不是裸丢历史——关键工作上下文要做恢复快照。</p>
 </blockquote>
 <hr>
-<h2 id="7-核心六：文件级长期记忆-——-用户级-项目级双层"><a href="#7-核心六：文件级长期记忆-——-用户级-项目级双层" class="headerlink" title="7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层"></a>7. 核心六：文件级长期记忆 —— 用户级 &#x2F; 项目级双层</h2><p>PersonalCode 的记忆不是塞在数据库向量里，而是<strong>用普通 Markdown 文件组织</strong>（<code>personalcode/memory/auto_memory.py</code>）。每条记忆一个 <code>.md</code>，带 frontmatter：</p>
+<h2 id="7-核心六：会话记忆折叠-——-用结构化状态替换历史"><a href="#7-核心六：会话记忆折叠-——-用结构化状态替换历史" class="headerlink" title="7. 核心六：会话记忆折叠 —— 用结构化状态替换历史"></a>7. 核心六：会话记忆折叠 —— 用结构化状态替换历史</h2><p>Layer 2 的纯摘要有个固有短板：它把历史压成一段<strong>文本</strong>，容易丢掉「继续推进所需的状态」——当前子目标、卡在哪、下一步做什么。于是我给它加了一条并列路径：<strong>会话记忆折叠</strong>（<code>context/folding.py</code>）。</p>
+<p>折叠的产物不是一段摘要，而是一个固定 schema 的 <strong>三结构记忆 JSON</strong>（<code>folding.py:31</code>）：</p>
+<pre><code>episode_memory   任务经过：task_description / key_events / current_progress
+working_memory   当前推进：immediate_goal / current_challenges / next_actions
+tool_memory      工具经验：tools_used / derived_rules
+</code></pre>
+<p><strong>生成流程</strong>（<code>agent.py:636</code> <code>generate_folded_session_memory</code>）：</p>
+<ol>
+<li><code>build_transcript_from_history</code>（<code>folding.py:129</code>）把 <code>Message</code> 历史渲染成对话记录（含 tool_use &#x2F; tool_result）。</li>
+<li>默认 <code>three_parallel</code> 模式——三块记忆用 <code>asyncio.gather</code> <strong>并发独立</strong>生成；也支持单 JSON 模式。</li>
+<li><code>format_folded_memory</code>（<code>folding.py:248</code>）渲染成 <code>&lt;session-folded-memory&gt;</code> 消息，<code>conversation.replace_history</code> 替换整个历史。</li>
+</ol>
+<p><strong>与摘要共享链路，二选一</strong>（<code>manager.py:682</code>）：<code>auto_compact</code> 里 <code>if fold_memory_fn is not None:</code> 走折叠，否则走摘要——<strong>同一个入口、同一套双阈值与熔断器</strong>。所以折叠<strong>不是新增的第三层</strong>，而是 Layer 2 里与摘要并列的一种产出形态。</p>
+<p><strong>三层兜底，绝不丢现场</strong>：三块任一生成失败、或 JSON 解析失败 → <code>fallback_folded_memory</code>（<code>folding.py:224</code>）把<strong>原始 transcript 塞进 <code>current_progress</code> 字段</strong>，用略多的 token 换「不丢现场」。</p>
+<p><strong>双触发</strong>：接近阈值时自动折叠；模型也可以自主调用 <code>compact_context</code> 工具（<code>tools/compact_context.py</code>）触发 <code>manual_fold</code>（<code>agent.py:677</code>），每轮注入折叠指引（<code>agent.py:615</code> <code>_build_fold_guidance_section</code>），折叠次数到上限（默认 3）后改注入「已达上限」。</p>
+<p><strong>记录与恢复</strong>：折叠产出写成 <code>TYPE_FOLDED_MEMORY</code> 记录（<code>memory/session.py:214</code> <code>make_folded_memory_record</code>），<code>resume</code> 时 <code>records_to_messages</code>（<code>session.py:253</code>）把折叠记录还原成一条折叠记忆 user 消息，会话从折叠状态继续。</p>
+<blockquote>
+<p><strong>知识点：结构化折叠 vs 纯摘要</strong><br>纯摘要优化的是「token」，折叠优化的是「可继续执行的状态」。长任务要的从来不是「记住所有字」，而是「知道现在该做什么」。把历史折叠成「任务经过 &#x2F; 当前推进 &#x2F; 工具经验」三块结构化状态，比一段有损摘要更贴近 Agent 继续推进的真实需要。</p>
+<p><strong>诚实说明</strong>：折叠链路已完整实现并有 23 个单元&#x2F;集成测试覆盖（<code>tests/test_folding.py</code>、<code>tests/test_agent_fold_integration.py</code>），但当前运行入口<strong>默认未开启</strong>——<code>Agent._fold_ctx</code> 初始为 <code>None</code>，需要在构造时注入折叠配置才会启用。这是一种「能力已就绪、按配置启用」的状态。</p>
+</blockquote>
+<hr>
+<h2 id="8-核心七：文件级长期记忆-——-用户级-项目级双层"><a href="#8-核心七：文件级长期记忆-——-用户级-项目级双层" class="headerlink" title="8. 核心七：文件级长期记忆 —— 用户级 &#x2F; 项目级双层"></a>8. 核心七：文件级长期记忆 —— 用户级 &#x2F; 项目级双层</h2><p>PersonalCode 的记忆不是塞在数据库向量里，而是<strong>用普通 Markdown 文件组织</strong>（<code>personalcode/memory/auto_memory.py</code>）。每条记忆一个 <code>.md</code>，带 frontmatter：</p>
 <pre><code class="language-markdown">---
 name: my-kebab-case-name
 description: 一句话描述
@@ -419,37 +470,56 @@ type: user | feedback | project | reference   # 类型决定存到哪个目录
 <li><strong>用户级</strong>（<code>~/.personalcode/memory/</code>）：<code>user</code> &#x2F; <code>feedback</code> 类型，跨项目跟随你。</li>
 <li><strong>项目级</strong>（<code>&lt;project&gt;/.personalcode/memory/</code>）：<code>project</code> &#x2F; <code>reference</code> 类型，可提交进 git 团队共享。</li>
 </ul>
-<p>两个目录各自维护一份 <code>MEMORY.md</code> 索引（<code>ENTRYPOINT_NAME</code>），且<strong>带截断保护</strong>（<code>auto_memory.py:156</code>）：超过 200 行或 25KB 就截断并加 WARNING——索引太长会占掉大量上下文。</p>
-<p>自动提取也做了 <strong>去重</strong>：<code>MemoryManager.extract()</code>（<code>auto_memory.py:410</code>）每次提取前先扫描已有记忆生成 manifest 喂给 LLM，「能更新已有文件就别新建重复的」。提取由主循环定期触发（<code>agent.py:747</code> 每轮检查），并且有<strong>合并策略</strong>防止并发重复提取。</p>
+<p>两个目录各自维护一份 <code>MEMORY.md</code> 索引（<code>ENTRYPOINT_NAME</code>），且<strong>带截断保护</strong>（<code>auto_memory.py:151</code> <code>truncate_entrypoint_content</code>）：超过 200 行或 25KB（<code>auto_memory.py:32/33</code>）就截断并加 WARNING——索引太长会占掉大量上下文。</p>
+<p>自动提取也做了 <strong>去重</strong>：<code>MemoryManager.extract()</code>（<code>auto_memory.py:405</code>）每次提取前先扫描已有记忆生成 manifest 喂给 LLM，「能更新已有文件就别新建重复的」。提取由主循环定期触发（<code>agent.py:1452</code> <code>_extract_memories</code>），并且有<strong>合并策略</strong>防止并发重复提取。</p>
 <blockquote>
 <p><strong>知识点：Agent 记忆分级</strong><br>记忆分三类：<strong>工作记忆</strong>（当前上下文窗口）、<strong>长期记忆</strong>（跨 session 的文件）、<strong>程序记忆</strong>（技能&#x2F;工具&#x2F;策略）。文件级记忆的妙处是<strong>人可读、可 diff、可 git 提交</strong>——记忆不是玄学，而是仓库里普通的管理文件。</p>
 </blockquote>
 <hr>
-<h2 id="8-核心七：多智能体-Teams-——-Lead–Worker-协调模式"><a href="#8-核心七：多智能体-Teams-——-Lead–Worker-协调模式" class="headerlink" title="8. 核心七：多智能体 Teams —— Lead–Worker 协调模式"></a>8. 核心七：多智能体 Teams —— Lead–Worker 协调模式</h2><p>这是本项目「最有 Agent 味」的能力。PersonalCode 支持把一次编码任务组织成一支<strong>团队</strong>：Lead 负责调度、拆解、汇总，Worker 负责并行研究 &#x2F; 实现 &#x2F; 验证。整套编排逻辑写在 <code>teams/coordinator.py</code> 的 <code>get_coordinator_system_prompt()</code> 里——它本身就是给 Lead 的 system prompt，把「怎么当好一个调度者」讲得非常细：</p>
+<h2 id="9-核心八：Skills-自进化-——-让程序记忆自己长大"><a href="#9-核心八：Skills-自进化-——-让程序记忆自己长大" class="headerlink" title="9. 核心八：Skills 自进化 —— 让程序记忆自己长大"></a>9. 核心八：Skills 自进化 —— 让程序记忆自己长大</h2><p>Skill 是 Agent 的<strong>程序记忆</strong>（怎么做一件特定的事）。但如果每次都要手写 <code>SKILL.md</code>，「程序记忆」就永远被人为卡住。于是我为它加了一条<strong>自进化链路</strong>：从「对话 + 下一轮用户反馈」自动沉淀可复用方法。</p>
+<p><strong>核心区分</strong>：记忆记<strong>事实</strong>（项目背景、用户偏好），Skill 沉淀<strong>方法</strong>（可复用工作流、输出规范、判断标准）。分不清就会出现「把一次性任务内容当长期规则存下来」的污染，所以自进化有严格的证据约束。</p>
+<p><strong>五环链路</strong>（<code>skills/online_evolution.py</code>、<code>skills/evolution.py</code>、<code>agent.py</code>）：</p>
+<ol>
+<li><strong>暂存窗口</strong>（<code>agent.py:507</code> <code>_set_pending_skill_extraction_window</code>）：一轮结束先不沉淀，把「最近 8 条对话 + 本轮 user&#x2F;assistant + 检索引用」暂存。</li>
+<li><strong>合并下一轮反馈</strong>（<code>agent.py:525</code> <code>_pop_pending_skill_extraction_window</code>）：下一轮用户消息到来时，把它当作「反馈」合并进窗口——<strong>用户认可&#x2F;纠正才是「真的该沉淀」的证据</strong>，而不是让模型自评「我学到了什么」。</li>
+<li><strong>后台抽取 + 决策</strong>（<code>agent.py:585</code> <code>_run_online_skill_evolution</code> → <code>skills/online_evolution.py:310</code> <code>online_ingest</code>）：<ul>
+<li><strong>Extractor</strong>（<code>online_evolution.py:110</code>）：用独立调用从窗口抽<strong>最多 1 个</strong>候选，硬约束「用户消息是主证据、过滤一次性内容&#x2F;私密信息&#x2F;精确日期」。</li>
+<li><strong>Maintainer</strong>（<code>online_evolution.py:195</code>）：对候选做 <strong>add &#x2F; merge &#x2F; discard</strong> 决策——归一化完全重合强制 merge、相似度 top≥0.55 改 merge、非法动作降级 discard，<strong>优先合并而非无限新增</strong>。</li>
+</ul>
+</li>
+<li><strong>落盘 + 审计</strong>（<code>skills/evolution.py:302</code> <code>create_skill_file</code> &#x2F; <code>:415</code> <code>evolve_skill_file</code>）：新增写 <code>&lt;project&gt;/.personalcode/skills/&lt;slug&gt;/SKILL.md</code>；合并先快照到 <code>skill-evolution/history/&lt;slug&gt;.jsonl</code>、bump patch 版本再写回。每次 <code>online_ingest</code> 无论结果都写 <code>record_online_skill_provenance</code>（<code>evolution.py:521</code>）→ 审计 jsonl + 聚合索引。</li>
+<li><strong>刷新生效</strong>：add&#x2F;merge 成功后 reload，新 skill 立即进入 catalog，供后续检索调用。</li>
+</ol>
+<p><strong>权限边界</strong>：<code>skills/</code> 默认无条件禁写（第 5 节），为此加了 <code>PathSandbox.without_skill_deny()</code>（<code>sandbox.py:17</code>）——只在自进化后台任务与显式技能工具的沙箱构造处放开 skills 目录，<code>config.yaml</code> 等仍禁写；且 <code>skill_create</code>&#x2F;<code>skill_evolve</code> 是 <code>category=write</code>，default 模式下仍走 HITL 确认。<strong>不是给权限开后门，而是给「沉淀」留一条受控的实例级写入口。</strong></p>
+<blockquote>
+<p><strong>知识点：可审计的自进化</strong><br>自进化听起来激进，但设计是保守的：用<strong>用户后续反馈</strong>作证据（而非模型自我总结）、用 <strong>add&#x2F;merge&#x2F;discard</strong> 控制规模、用 <strong>provenance + 版本快照</strong>保证可回放。它不是「模型随便改自己」，而是「把用户认可的稳定方法，沉淀成可追踪、可治理的技能文件」。</p>
+</blockquote>
+<hr>
+<h2 id="10-核心九：多智能体-Teams-——-Lead–Worker-协调模式"><a href="#10-核心九：多智能体-Teams-——-Lead–Worker-协调模式" class="headerlink" title="10. 核心九：多智能体 Teams —— Lead–Worker 协调模式"></a>10. 核心九：多智能体 Teams —— Lead–Worker 协调模式</h2><p>这是本项目「最有 Agent 味」的能力。PersonalCode 支持把一次编码任务组织成一支<strong>团队</strong>：Lead 负责调度、拆解、汇总，Worker 负责并行研究 &#x2F; 实现 &#x2F; 验证。整套编排逻辑写在 <code>teams/coordinator.py</code> 的 <code>get_coordinator_system_prompt()</code> 里——它本身就是给 Lead 的 system prompt，把「怎么当好一个调度者」讲得非常细：</p>
 <ul>
 <li><strong>Worker 看不到你的对话</strong>，所以每条子任务 prompt 必须<strong>自包含</strong>（含文件路径、行号、要改成什么）。</li>
 <li><strong>绝不让实现 Worker 验证自己的工作</strong>，必须另派一个只读的 <code>Verification</code> Worker 用「fresh eyes」查 bug。</li>
 <li><strong>按上下文重叠决定 continue vs spawn</strong>：研究已覆盖目标文件就 <code>SendMessage</code> 续写，探索过宽就新派一个干净的。</li>
 </ul>
-<p>还专门处理了<strong>长会话漂移</strong>问题（<code>coordinator.py:211</code>）：那份 8KB 的调度指引首轮全文注入，之后每 5 轮才复述一次全文，中间轮只发精简版 <code>COORDINATOR_SPARSE_REMINDER</code>，避免重复内容把省下来的上下文又填回去。</p>
+<p>还专门处理了<strong>长会话漂移</strong>问题（<code>coordinator.py:206</code> <code>get_coordinator_reminder</code>）：那份 8KB 的调度指引首轮全文注入，之后每 5 轮（<code>coordinator.py:203</code> <code>REMINDER_INTERVAL</code>）才复述一次全文，中间轮只发精简版 <code>COORDINATOR_SPARSE_REMINDER</code>，避免重复内容把省下来的上下文又填回去。</p>
 <pre><code class="language-python">def get_coordinator_reminder(iteration, agent_catalog=None):
     if iteration &lt;= 1 or (iteration - 1) % REMINDER_INTERVAL == 0:
         return get_coordinator_system_prompt(agent_catalog=agent_catalog)  # 全文
     return COORDINATOR_SPARSE_REMINDER                                     # 精简版
 </code></pre>
-<p>Worker 之间的通信走<strong>邮箱 + 共享任务板</strong>：Lead 派活写入邮箱，Worker 主循环用 <code>_consume_mailbox</code>（<code>agent.py:893</code>）在每轮迭代开始时消费；队员通过 <code>TaskCreate/TaskGet/TaskUpdate</code> 读写团队共享的 <code>tasks.json</code>。多 Agent 后端支持 <code>in-process</code> &#x2F; <code>tmux</code> &#x2F; <code>iTerm2</code> 三种 spawn 方式（<code>teams/models.py</code> 的 <code>BackendType</code>）。</p>
+<p>Worker 之间的通信走<strong>邮箱 + 共享任务板</strong>：Lead 派活写入邮箱，Worker 主循环用 <code>_consume_mailbox</code>（<code>agent.py:1263</code>）在每轮迭代开始时消费；队员通过 <code>TaskCreate/TaskGet/TaskUpdate</code> 读写团队共享的 <code>tasks.json</code>；结构化消息用 <code>request_id</code> 配对，防多个 Worker 同时回话时认错。多 Agent 后端支持 <code>in-process</code> &#x2F; <code>tmux</code> &#x2F; <code>iTerm2</code> 三种 spawn 方式（<code>teams/models.py</code> 的 <code>BackendType</code>）。</p>
 <blockquote>
 <p><strong>知识点：协调者模式（Coordinator）</strong><br>处理复杂长任务时，「一个超大 Agent」不如「一个调度者 + 多个专职 Worker」：调度者上下文里只放<strong>任务分解、Worker 状态、汇总</strong>，具体脏活分给专用 Worker。代价是<strong>交接契约</strong>要极其清晰（自包含 prompt、结构化通知、按名寻址），这正是 Lead prompt 花大篇幅写「怎么写好 Worker prompt」的原因。</p>
 </blockquote>
 <hr>
-<h2 id="9-核心八：子-Agent-与-Verification-——-Reflexion-式对抗质检"><a href="#9-核心八：子-Agent-与-Verification-——-Reflexion-式对抗质检" class="headerlink" title="9. 核心八：子 Agent 与 Verification —— Reflexion 式对抗质检"></a>9. 核心八：子 Agent 与 Verification —— Reflexion 式对抗质检</h2><p>除了平级的 Teams，PersonalCode 还有<strong>父子子 Agent</strong>：主 Agent 可以通过 <code>Agent</code> 工具派子 Agent。子 Agent 定义也是 Markdown 文件（<code>agents/loader.py</code>），按 <strong>项目级 → 用户级 → 内置</strong> 三层加载，支持热重载。</p>
-<p>内置了 <code>Verification</code> 这种<strong>只读质检型 Agent</strong>（<code>agents/builtins/verification.md</code>），由 <code>enable_verification_agent</code> 配置控制是否启用（<code>agents/loader.py:83</code>）。它「cannot edit files, focuses on finding bugs」——专门用 fresh eyes 挑毛病，这正接近 <strong>Reflexion（反思）</strong> 范式：不让干活的 Agent 自己验收自己，而是让一个独立的、只读的审查者去攻击结果。</p>
-<p>配合 <code>/review</code> 命令，能把当前代码变更丢给模型做<strong>对抗式代码审查</strong>。子 Agent 的调用关系被完整记录下来（见第 11 节的 trace 树），可通过 <code>/trace</code> 查看父子追踪。</p>
+<h2 id="11-核心十：子-Agent-与-Verification-——-Reflexion-式对抗质检"><a href="#11-核心十：子-Agent-与-Verification-——-Reflexion-式对抗质检" class="headerlink" title="11. 核心十：子 Agent 与 Verification —— Reflexion 式对抗质检"></a>11. 核心十：子 Agent 与 Verification —— Reflexion 式对抗质检</h2><p>除了平级的 Teams，PersonalCode 还有<strong>父子子 Agent</strong>：主 Agent 可以通过 <code>Agent</code> 工具派子 Agent。子 Agent 定义也是 Markdown 文件（<code>agents/loader.py</code>），按 <strong>项目级 → 用户级 → 内置</strong> 三层加载，支持热重载。</p>
+<p>内置了 <code>Verification</code> 这种<strong>只读质检型 Agent</strong>（<code>agents/builtins/verification.md</code>），由 <code>enable_verification_agent</code> 配置控制是否启用（<code>agents/loader.py:21</code>）。它「cannot edit files, focuses on finding bugs」——专门用 fresh eyes 挑毛病，这正接近 <strong>Reflexion（反思）</strong> 范式：不让干活的 Agent 自己验收自己，而是让一个独立的、只读的审查者去攻击结果。</p>
+<p>配合 <code>/review</code> 命令，能把当前代码变更丢给模型做<strong>对抗式代码审查</strong>。子 Agent 的调用关系被完整记录下来（见第 14 节的 trace 树），可通过 <code>/trace</code> 查看父子追踪。</p>
 <blockquote>
 <p><strong>知识点：独立验证者（Verification）</strong><br>实现者对自己代码天然有「锚定偏见」，会 rubber-stamp。把验证拆成<strong>独立的、只读的、专门找茬的 Agent</strong>，用 fresh eyes 去看同一份代码，是提升 Agent 产出质量最高性价比的手段之一。</p>
 </blockquote>
 <hr>
-<h2 id="10-核心九：技能-Skill（程序记忆）与-MCP-工具扩展"><a href="#10-核心九：技能-Skill（程序记忆）与-MCP-工具扩展" class="headerlink" title="10. 核心九：技能 Skill（程序记忆）与 MCP 工具扩展"></a>10. 核心九：技能 Skill（程序记忆）与 MCP 工具扩展</h2><p>Agent 的「程序记忆」——怎么做一件特定的事——被建模成了 <strong>Skill 技能包</strong>（<code>skills/</code>）：一个带 YAML frontmatter 的 <code>SKILL.md</code>，项目级（<code>.personalcode/skills</code>）、用户级、内置三层加载，用 <code>/skill</code> 命令管理。内置了 <code>frontend-design</code>、<code>skill-creator</code> 示例。</p>
+<h2 id="12-核心十一：技能-Skill-与-MCP-工具扩展"><a href="#12-核心十一：技能-Skill-与-MCP-工具扩展" class="headerlink" title="12. 核心十一：技能 Skill 与 MCP 工具扩展"></a>12. 核心十一：技能 Skill 与 MCP 工具扩展</h2><p>Agent 的「程序记忆」被建模成了 <strong>Skill 技能包</strong>（<code>skills/</code>）：一个带 YAML frontmatter 的 <code>SKILL.md</code>，项目级（<code>.personalcode/skills</code>）、用户级、内置三层加载，用 <code>/skill</code> 命令管理——它既是手写&#x2F;安装的能力来源，也是第 9 节自进化的沉淀目标。</p>
 <p>而<strong>外部工具的扩展</strong>走 <strong>MCP（Model Context Protocol）</strong>：可插拔的服务器可以是 stdio 子进程，也可以是 Streamable HTTP（<code>mcp/</code>）。MCP 服务器动辄几十个工具、schema 又长，所以 PersonalCode 引入 <strong>ToolSearch 延迟加载</strong>（<code>tools/__init__.py</code> 的 <code>ToolRegistry</code>、<code>mcp/loading_strategy.py</code>）：</p>
 <ul>
 <li>默认<strong>不</strong>把全部 MCP 工具塞进初始 <code>tools[]</code>（会占掉一大块上下文）。</li>
@@ -457,10 +527,23 @@ type: user | feedback | project | reference   # 类型决定存到哪个目录
 <li>何时暴露检索&#x2F;分发工具、以何种加载模式（eager &#x2F; native &#x2F; dispatch）适配不同端点，由 <code>loading_strategy.py</code> 按上下文窗口与 schema 总量决策。</li>
 </ul>
 <blockquote>
-<p><strong>知识点：工具的按需加载（Lazy Loading）</strong><br>工具 schema 本身也占 token。与其把几百个工具的 schema 全塞进上下文，不如<strong>按需检索、按需加载</strong>——这是长上下文 + 大规模工具集并存时的关键优化。</p>
+<p><strong>知识点：工具的按需加载（Lazy Loading）</strong><br>工具 schema 本身也占 token。与其把几百个工具的 schema 全塞进上下文，不如<strong>按需检索、按需加载</strong>——这是长上下文 + 大规模工具集并存时的关键优化。补充一个工程细节：<code>tools[]</code> 数组一旦变动，其后的整段对话缓存前缀失效（仓库注释记载自测命中率从 99.4% 掉到 9.5%），所以加载模式在会话启动时一次定死，避免中途抖动。</p>
 </blockquote>
 <hr>
-<h2 id="11-可观测性：生命周期-Hooks-与父子-Trace-树"><a href="#11-可观测性：生命周期-Hooks-与父子-Trace-树" class="headerlink" title="11. 可观测性：生命周期 Hooks 与父子 Trace 树"></a>11. 可观测性：生命周期 Hooks 与父子 Trace 树</h2><p>一个健壮的 Agent 系统必须<strong>把「它在想什么、在做什么」变成可观测的事件流</strong>。PersonalCode 从两个维度做可观测：</p>
+<h2 id="13-消融测评-——-用对照证明一个机制到底有没有用"><a href="#13-消融测评-——-用对照证明一个机制到底有没有用" class="headerlink" title="13. 消融测评 —— 用对照证明一个机制到底有没有用"></a>13. 消融测评 —— 用对照证明一个机制到底有没有用</h2><p>新机制不能靠「看起来合理」过关。所以我给 Skill 自进化配了一套<strong>配对消融脚本</strong>（<code>eval/eval_skill_evolution.py</code>），原则是：<strong>固定任务集、同一任务跑两遍、只改一个变量</strong>。</p>
+<ul>
+<li><strong>任务集</strong>（<code>data/eval/skill_cases.jsonl</code>）：4 个「可自我验证的编码任务」，每个带明确答案 + 一条可复用的用户反馈。</li>
+<li><strong>配对 A&#x2F;B</strong>（<code>eval_skill_evolution.py:199</code> <code>_run_case</code>）：同一个任务跑「无自进化」（不注册技能工具、不注入反馈）与「有自进化」（注册工具 + 注入反馈并触发沉淀）两组，交替执行顺序控制变量，独立会话互不污染。</li>
+<li><strong>汇总</strong>（<code>eval_skill_evolution.py:100</code> <code>summarize</code>）：输出正确率四桶（both_correct &#x2F; evolve_only &#x2F; no_evolve_only &#x2F; both_wrong）、<code>accuracy_delta_percentage_points</code>、<code>skills_created</code>。</li>
+<li>有 <code>--validate-only</code> 模式：先校验题目集、不调用模型，再决定是否实跑。</li>
+</ul>
+<p><strong>实测结果（如实记录）</strong>：4 个任务 × 2 组全部完成，两组正确率均 50%，<strong>准确率差 0 个百分点</strong>；但开启自进化的一组<strong>真实沉淀了 4 个 SKILL.md</strong>（<code>parse-markdown-table</code>、<code>longest-common-prefix</code>、<code>ipv4-strict-validation</code>、<code>int-to-roman-numerals</code>），审计里有创建记录，追踪文件证实「收到反馈 → 沉淀技能 → 加载技能」闭环确实发生。</p>
+<p><strong>结论（不作美化）</strong>：机制链路可用、留痕完整，但<strong>评测任务简单到模型不依赖技能也能当场算对</strong>，因此没有观测到边际收益——要体现正收益，需要换成更难、依赖「方法记忆」的任务集。这个结论我如实记录，没有包装成「自进化带来了提升」。</p>
+<blockquote>
+<p><strong>知识点：评测的价值是逼你面对真相</strong><br>消融的作用不是产出一个好看的数字，而是<strong>拦住一个想当然的结论</strong>。跑完拿到「机制通、但当前任务集无增益」的诚实基线，下一步该做什么就非常清楚。衡量评测价值的标准不是结果好不好看，而是它是否给了你继续改进的抓手。</p>
+</blockquote>
+<hr>
+<h2 id="14-可观测性：生命周期-Hooks-与父子-Trace-树"><a href="#14-可观测性：生命周期-Hooks-与父子-Trace-树" class="headerlink" title="14. 可观测性：生命周期 Hooks 与父子 Trace 树"></a>14. 可观测性：生命周期 Hooks 与父子 Trace 树</h2><p>一个健壮的 Agent 系统必须<strong>把「它在想什么、在做什么」变成可观测的事件流</strong>。PersonalCode 从两个维度做可观测：</p>
 <p><strong>① Hooks 事件协议（<code>hooks/events.py</code>）。</strong> 定义了五层生命周期事件：</p>
 <pre><code class="language-python">class LifecycleEvent(StrEnum):
     SESSION_START / SESSION_END      # 会话级
@@ -478,47 +561,56 @@ type: user | feedback | project | reference   # 类型决定存到哪个目录
     input_tokens: int; output_tokens: int
     tool_call_count: int; status: str
 </code></pre>
-<p><code>TraceManager.get_tree(trace_id)</code> 能聚合整棵树的 token 消耗——<code>/trace</code> 命令把它渲染出来，让你看清「这一轮任务是谁派给谁、谁烧了多少 token」。</p>
+<p><code>TraceManager.get_tree(trace_id)</code> 能聚合整棵树的 token 消耗——<code>/trace</code> 命令把它渲染出来，让你看清「这一轮任务是谁派给谁、谁烧了多少 token」。Skill 自进化的每次沉淀也落在 <code>.personalcode/skill-evolution/</code> 的审计 jsonl 里，与 trace 一起构成「能力从哪来、谁触发、结果如何」的可回放链条。</p>
 <blockquote>
-<p><strong>知识点：Agent 的可观测性</strong><br>主循环事件流 &#x3D; 实时「它在干嘛」；trace 树 &#x3D; 事后「它是怎么派生的、烧了多少」。两者配合，一个多智能体系统才不是黑盒——这是排障、计费、调优的地基。</p>
+<p><strong>知识点：Agent 的可观测性</strong><br>主循环事件流 &#x3D; 实时「它在干嘛」；trace 树 &#x3D; 事后「它是怎么派生的、烧了多少」；审计日志 &#x3D; 「它沉淀了什么、为什么」。三者配合，一个会自演进的多智能体系统才不是黑盒——这是排障、计费、调优的地基。</p>
 </blockquote>
 <hr>
-<h2 id="12-工程韧性：那些让-Agent-真正能用的「脏活」"><a href="#12-工程韧性：那些让-Agent-真正能用的「脏活」" class="headerlink" title="12. 工程韧性：那些让 Agent 真正能用的「脏活」"></a>12. 工程韧性：那些让 Agent 真正能用的「脏活」</h2><p>华丽的能力之外，拉开生产级与 Demo 差距的，都是不起眼的工程韧性：</p>
+<h2 id="15-工程韧性：那些让-Agent-真正能用的「脏活」"><a href="#15-工程韧性：那些让-Agent-真正能用的「脏活」" class="headerlink" title="15. 工程韧性：那些让 Agent 真正能用的「脏活」"></a>15. 工程韧性：那些让 Agent 真正能用的「脏活」</h2><p>华丽的能力之外，拉开生产级与 Demo 差距的，都是不起眼的工程韧性：</p>
 <ul>
-<li><strong>强制迭代上限</strong>。主循环 <code>max_iterations &gt; 0 and iteration &gt; max_iterations</code>（<code>agent.py:584</code>）保证系统<strong>一定在有限步内终止</strong>，不会烧光预算。</li>
-<li><strong>max_tokens 自愈</strong>。<code>stop_reason == &quot;max_tokens&quot;</code> 时先升级输出上限（<code>MAX_TOKENS_CEILING</code>），再触发「断点续写」重试，最多恢复 <code>MAX_OUTPUT_TOKENS_RECOVERIES</code> 次（<code>agent.py:713</code>）。</li>
+<li><strong>强制迭代上限</strong>。主循环 <code>max_iterations &gt; 0 and iteration &gt; max_iterations</code>（<code>agent.py:894</code>）保证系统<strong>一定在有限步内终止</strong>，不会烧光预算。</li>
+<li><strong>max_tokens 自愈</strong>。<code>stop_reason == &quot;max_tokens&quot;</code> 时先升级输出上限（<code>MAX_TOKENS_CEILING</code>，<code>agent.py:63</code>），再触发「断点续写」重试，最多恢复 <code>MAX_OUTPUT_TOKENS_RECOVERIES</code> 次（<code>agent.py:1066</code>）。</li>
 <li><strong>崩溃恢复</strong>。<code>crashlog.py</code> 把异常落盘，<code>__main__.py</code> 兜住框架之外的部分；会话以 <code>jsonl</code> 存到 <code>.personalcode/sessions/</code>，<code>/rewind</code> + 文件历史可回溯到任意检查点。</li>
-<li><strong>工具错误不炸循环</strong>。单个工具失败被收成一条带 <code>tool_id</code> 的 <code>ToolResult(is_error=True)</code>（<code>agent.py:301</code> 的 <code>_error_result</code>）喂回模型，让它自己换个做法，而不是中断整轮。</li>
+<li><strong>工具错误不炸循环</strong>。单个工具失败被收成一条带 <code>tool_id</code> 的 <code>ToolResult(is_error=True)</code>（<code>agent.py:325</code> 的 <code>_error_result</code>）喂回模型，让它自己换个做法，而不是中断整轮。</li>
+<li><strong>自进化不炸主流程</strong>。Skill 沉淀是后台任务（<code>_schedule_background_skill_task</code>），plan 模式直接跳过；折叠解析失败有 <code>fallback_folded_memory</code> 兜底。</li>
 <li><strong>Worktree 隔离</strong>。多 Agent 并行改代码时用 git worktree 隔离（<code>worktree/</code>），互不踩踏。</li>
 </ul>
 <hr>
-<h2 id="13-架构全景回顾"><a href="#13-架构全景回顾" class="headerlink" title="13. 架构全景回顾"></a>13. 架构全景回顾</h2><p>把上述各线拼起来，整个 Agent 系统的架构就是：</p>
+<h2 id="16-架构全景回顾"><a href="#16-架构全景回顾" class="headerlink" title="16. 架构全景回顾"></a>16. 架构全景回顾</h2><p>把上述各线拼起来，整个 Agent 系统的架构就是：</p>
 <pre><code>┌─────────────────────── 前端：Textual TUI ｜ 浏览器(WebSocket) ｜ -p 非交互 / stream-json ───────────────────────┐
-│  流式输出 · 思考 · 工具调用进度 · 权限弹窗 · 多智能体调度指示 · 父子 Trace 树                                  │
+│  流式输出 · 思考 · 工具调用进度 · 权限弹窗 · 多智能体调度指示 · 父子 Trace 树 · 技能沉淀提示                     │
 └─────────────────────────────────────────────▲ AgentEvent 事件流 ──────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                     Agent 主循环（agent.py）—— ReAct                                │
 │    Thought → ToolUse(并发分批) → 权限决策(6层 HITL) → ToolResult(溢写落盘) → Observation → Loop       │
-│    · StreamingExecutor 流式执行 · auto-compact(摘要+恢复) · 记忆自动提取 · max_tokens 自愈            │
+│    · StreamingExecutor · auto-compact(摘要+折叠+恢复) · 记忆提取 · Skill 自进化 · max_tokens 自愈      │
 └──────┬──────────────┬───────────────┬───────────────┬────────────────┬────────────────────────────┘
        ▼              ▼               ▼               ▼                ▼
     工具系统         权限决策         长期记忆         多智能体 Teams    MCP / Skill 扩展
     (tools/)        (permissions/)   (memory/)       (teams/)        (mcp/ skills/)
    Read/Write/Edit  4模式×6层管线     用户级/项目级    Lead→Worker      ToolSearch 延迟加载
-   Bash/Glob/Grep   危险命令黑名单     MEMORY.md索引    邮箱/共享任务     可插拔服务器
-   Agent子Agent      路径沙箱+规则     自动提取去重      Verification     程序记忆
+   Bash/Glob/Grep   危险命令黑名单     MEMORY.md索引    邮箱/共享任务      可插拔服务器
+   Agent子Agent      路径沙箱+规则     自动提取去重      Verification      程序记忆
+   skill_create/     skill 写盘放行                     request_id 配对   Skill 自进化(沉淀)
+   skill_evolve/     (实例级边界)                                        审计 + 版本快照
+   compact_context
+       ▼
+   上下文治理：Layer1 溢写(无损) → Layer2 摘要或折叠(有损) → 记录/resume 恢复
        ▼
    异构 LLM（anthropic / openai / openai-compat）· 自动探测 context window
+       ▼
+   评测：配对消融（eval/）· 审计产物（.personalcode/skill-evolution/）
 </code></pre>
 <hr>
-<h2 id="14-Agent-工程师的几点心得"><a href="#14-Agent-工程师的几点心得" class="headerlink" title="14. Agent 工程师的几点心得"></a>14. Agent 工程师的几点心得</h2><ol>
-<li><strong>事件驱动，而非黑盒函数。</strong> 把 Agent 的每一步（思考、用工具、要授权、压缩上下文）都 <code>yield</code> 成事件，内核就能挂 TUI、CLI、WebSocket 任意前端，可观测性和复用性一起拿到。</li>
+<h2 id="17-Agent-工程师的几点心得"><a href="#17-Agent-工程师的几点心得" class="headerlink" title="17. Agent 工程师的几点心得"></a>17. Agent 工程师的几点心得</h2><ol>
+<li><strong>事件驱动，而非黑盒函数。</strong> 把 Agent 的每一步（思考、用工具、要授权、压缩上下文、沉淀技能）都 <code>yield</code> 成事件，内核就能挂 TUI、CLI、WebSocket 任意前端，可观测性和复用性一起拿到。</li>
 <li><strong>先定工具的契约，再谈智能。</strong> 一套 <code>Tool</code> 抽象（schema + 校验 + 并发安全 + 分类）是整个系统地基。工具的 <code>is_concurrency_safe</code> 看参数不看类别，这是并发调度正确性的关键。</li>
-<li><strong>Agent 的「权力」必须受约束。</strong> 写文件、跑命令的能力配上六层权限管线 + 拒绝带反馈 + 允许落规则，才能既强大又可被人类否决。</li>
-<li><strong>上下文是稀缺资源，要分层治理。</strong> 大结果溢写落盘、长历史摘要压缩、工作上下文做恢复快照、MCP 工具按需加载——每一处都在给上下文窗口「精打细算」。</li>
+<li><strong>Agent 的「权力」必须受约束。</strong> 写文件、跑命令的能力配上六层权限管线 + 拒绝带反馈 + 允许落规则 + 受保护路径无条件禁写，才能既强大又可被人类否决；连「自进化写技能库」也要走受控的实例级放行。</li>
+<li><strong>上下文是稀缺资源，要分层渐进治理。</strong> 先无损（工具结果溢写）后有损（摘要&#x2F;折叠）；长历史不止要省 token，更要保住「能继续执行的状态」——这正是结构化折叠相对纯摘要的价值。</li>
+<li><strong>让程序记忆自己长大，但要可审计。</strong> Skill 自进化用「用户下一轮反馈」作证据、用 add&#x2F;merge&#x2F;discard 控规模、用 provenance + 版本快照保可回放——自进化不是让模型乱改自己。</li>
 <li><strong>复杂任务交给协调者 + 专职 Worker。</strong> 调度者只放任务分解和汇总，脏活分给只读验证等专用 Worker；用独立的 Verification Agent 对抗式质检，别让实现者自己验收。</li>
-<li><strong>记忆和可观测性一起建。</strong> 文件级记忆让 Agent「记得你」且人可审计；trace 树 + 事件流让它「可解释、可排障、可计费」。</li>
-<li><strong>永远有终止条件。</strong> 任何重试 &#x2F; 反思 &#x2F; 迭代循环都要有硬性上限，否则一次失控就烧光预算。</li>
+<li><strong>结论要用对照说话。</strong> 新机制上线前跑一次配对消融，哪怕结果是「无增益」——拿到诚实基线，比一个没有证据的好看说法有价值得多。</li>
+<li><strong>永远有终止条件、永远有兜底。</strong> 任何重试 &#x2F; 反思 &#x2F; 迭代循环都要有硬性上限；任何会丢现场的压缩都要有回退路径。</li>
 </ol>
 <hr>
 <h2 id="附：如何本地跑起来"><a href="#附：如何本地跑起来" class="headerlink" title="附：如何本地跑起来"></a>附：如何本地跑起来</h2><pre><code class="language-bash"># 1. 克隆并安装（要求 Python ≥ 3.11，推荐 uv）
@@ -535,10 +627,15 @@ personalcode                                    # 交互式 TUI
 personalcode -p &quot;解释这个仓库的架构&quot;              # 非交互模式
 personalcode --remote                           # 浏览器访问 http://localhost:18888
 personalcode --mode bypassPermissions           # 覆盖权限模式
+
+# 4. 跑一次 Skill 自进化消融（先校验题目，再实跑，需要 API key）
+python -m personalcode.eval.eval_skill_evolution --cases data/eval/skill_cases.jsonl --output eval-out/skills --validate-only
+python -m personalcode.eval.eval_skill_evolution --cases data/eval/skill_cases.jsonl --output eval-out/skills
+#    跑完看 eval-out/skills/summary.json 的 accuracy_delta_percentage_points 与 skills_created
 </code></pre>
-<p>跑起来后，试着用 <code>/trace</code> 看一次任务的父子调用树，用 <code>/memory</code> 看它记住了你什么，再给 <code>Teams</code> 派一个跨模块的重构任务，看 Lead 如何拆解、Worker 如何并行、Verification 如何回来挑刺。</p>
+<p>跑起来后，试着用 <code>/trace</code> 看一次任务的父子调用树，用 <code>/memory</code> 看它记住了你什么，再给 <code>Teams</code> 派一个跨模块的重构任务，看 Lead 如何拆解、Worker 如何并行、Verification 如何回来挑刺；最后给一句「以后都这样处理」的反馈，看它是否把方法沉淀进 <code>.personalcode/skills/</code>。</p>
 <hr>
-<p><em>本文内容均基于项目源码（<code>personalcode/agent.py</code>、<code>tools/</code>、<code>permissions/</code>、<code>memory/</code>、<code>teams/</code> 等）编写，力求真实准确。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">https://github.com/wjl8636/Personal-Code-Assistant</a></em> ⭐</p>
+<p><em>本文内容均基于项目源码（<code>personalcode/agent.py</code>、<code>tools/</code>、<code>permissions/</code>、<code>context/</code>、<code>memory/</code>、<code>skills/</code>、<code>teams/</code>、<code>eval/</code> 等）编写，行号与实测数据力求真实准确；未测量的收益一律标注为待测，未编造指标。项目地址：<a target="_blank" rel="noopener" href="https://github.com/wjl8636/Personal-Code-Assistant">https://github.com/wjl8636/Personal-Code-Assistant</a></em> ⭐</p>
 
     </div>
     
